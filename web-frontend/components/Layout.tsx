@@ -93,28 +93,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="sm:hidden flex items-center">
               <button
                 type="button"
-                className="btn-icon-modern p-2"
+                className="mobile-menu-button"
                 onClick={() => {
                   const mobileMenu = document.getElementById('mobile-menu');
-                  if (mobileMenu) {
+                  const button = document.querySelector('.mobile-menu-button');
+                  if (mobileMenu && button) {
                     mobileMenu.classList.toggle('hidden');
+                    button.classList.toggle('menu-open');
                   }
                 }}
               >
                 <span className="sr-only">Open main menu</span>
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+                <div className="hamburger-lines">
+                  <span className="hamburger-line"></span>
+                  <span className="hamburger-line"></span>
+                  <span className="hamburger-line"></span>
+                </div>
               </button>
             </div>
           </div>
@@ -122,60 +116,79 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Mobile menu */}
         <div
-          className="sm:hidden hidden"
+          className="sm:hidden hidden mobile-menu-modern"
           id="mobile-menu"
           style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(229, 231, 235, 0.8)',
           }}
         >
-          <div className="px-4 pt-2 pb-3 space-y-1 border-t border-gray-200">
+          <div className="px-3 pt-3 pb-4 space-y-2">
             <Link
               href="/"
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all ${
-                isActive('/')
-                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              className={`mobile-nav-link ${
+                isActive('/') ? 'mobile-nav-link-active' : ''
               }`}
+              onClick={() => {
+                const mobileMenu = document.getElementById('mobile-menu');
+                if (mobileMenu) {
+                  mobileMenu.classList.add('hidden');
+                }
+              }}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                />
-              </svg>
-              Goals
+              <div className="mobile-nav-icon">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                  />
+                </svg>
+              </div>
+              <div className="mobile-nav-text">
+                <span className="mobile-nav-title">Goals</span>
+                <span className="mobile-nav-subtitle">Manage your objectives</span>
+              </div>
             </Link>
 
             <Link
               href="/reports"
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all ${
-                isActive('/reports')
-                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              className={`mobile-nav-link ${
+                isActive('/reports') ? 'mobile-nav-link-active' : ''
               }`}
+              onClick={() => {
+                const mobileMenu = document.getElementById('mobile-menu');
+                if (mobileMenu) {
+                  mobileMenu.classList.add('hidden');
+                }
+              }}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              Reports
+              <div className="mobile-nav-icon">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+              </div>
+              <div className="mobile-nav-text">
+                <span className="mobile-nav-title">Reports</span>
+                <span className="mobile-nav-subtitle">View your progress</span>
+              </div>
             </Link>
           </div>
         </div>

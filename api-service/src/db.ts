@@ -6,9 +6,9 @@ dotenv.config();
 // Database configuration
 const dbConfig = {
   host: process.env['DB_HOST'] || 'localhost',
-  port: parseInt(process.env['DB_PORT'] || '5432'),
-  user: process.env['DB_USER'] || 'tracker_user',
-  password: process.env['DB_PASSWORD'] || 'tracker_password',
+  port: parseInt(process.env['DB_PORT'] || '5433'),
+  user: process.env['DB_USER'] || 'superuser',
+  password: process.env['DB_PASSWORD'] || 'superuser',
   database: process.env['DB_NAME'] || 'personal_tracker',
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds

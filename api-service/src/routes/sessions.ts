@@ -177,9 +177,41 @@ router.put('/:id/stop', async (req: Request, res: Response): Promise<void> => {
 
     const endTime = ended_at || new Date().toISOString();
 
+    // First get the session to calculate hours_spent manually
+    const sessionResult = await query(
+      'SELECT started_at FROM sessions WHERE id = $1 AND ended_at IS NULL',
+      [id]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Active session not found'
+      });
+      return;
+    }
+
+    const startTime = new Date(sessionResult.rows[0].started_at);
+    const endTimeDate = new Date(endTime);
+    const durationMs = endTimeDate.getTime() - startTime.getTime();
+    const hoursSpent = durationMs / (1000 * 60 * 60); // Convert to hours
+
+    console.log('Stop Session Debug:', {
+      sessionId: id,
+      startTime: startTime.toISOString(),
+      endTime: endTimeDate.toISOString(),
+      durationMs,
+      hoursSpent: hoursSpent.toFixed(6)
+    });
+
+    // Update session with ended_at and force hours_spent calculation
     const result = await query(
-      'UPDATE sessions SET ended_at = $1 WHERE id = $2 RETURNING *',
-      [endTime, id]
+      `UPDATE sessions
+       SET ended_at = $1,
+           hours_spent = $2
+       WHERE id = $3
+       RETURNING *`,
+      [endTime, hoursSpent.toFixed(6), id]
     );
 
     res.json({

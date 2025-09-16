@@ -91,13 +91,23 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 // Create new sub-goal
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { goal_id, title, hours_expected, start_month, end_month }: CreateSubGoalRequest = req.body;
+    const {
+      goal_id,
+      title,
+      description,
+      hours_expected,
+      start_date,
+      end_date,
+      // Legacy support
+      start_month,
+      end_month
+    }: CreateSubGoalRequest & { start_month?: number; end_month?: number } = req.body;
 
     // Validation
-    if (!goal_id || !title || !hours_expected || !start_month || !end_month) {
+    if (!goal_id || !title || !hours_expected) {
       res.status(400).json({
         success: false,
-        error: 'Missing required fields: goal_id, title, hours_expected, start_month, end_month'
+        error: 'Missing required fields: goal_id, title, hours_expected'
       });
       return;
     }
@@ -110,20 +120,45 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (start_month < 1 || start_month > 12 || end_month < 1 || end_month > 12) {
-      res.status(400).json({
-        success: false,
-        error: 'Months must be between 1 and 12'
-      });
-      return;
-    }
+    // Use new date format if provided, otherwise fall back to legacy month format
+    let finalStartDate = start_date;
+    let finalEndDate = end_date;
+    let finalStartMonth = start_month || 1;
+    let finalEndMonth = end_month || 12;
 
-    if (start_month > end_month) {
-      res.status(400).json({
-        success: false,
-        error: 'Start month cannot be after end month'
-      });
-      return;
+    if (start_date && end_date) {
+      // Validate date format (DD/MM)
+      const dateRegex = /^\d{2}\/\d{2}$/;
+      if (!dateRegex.test(start_date) || !dateRegex.test(end_date)) {
+        res.status(400).json({
+          success: false,
+          error: 'Date format must be DD/MM'
+        });
+        return;
+      }
+    } else if (start_month && end_month) {
+      // Legacy month validation
+      if (start_month < 1 || start_month > 12 || end_month < 1 || end_month > 12) {
+        res.status(400).json({
+          success: false,
+          error: 'Months must be between 1 and 12'
+        });
+        return;
+      }
+
+      if (start_month > end_month) {
+        res.status(400).json({
+          success: false,
+          error: 'Start month cannot be after end month'
+        });
+        return;
+      }
+
+      finalStartMonth = start_month;
+      finalEndMonth = end_month;
+      // Convert months to dates for new format
+      finalStartDate = `01/${start_month.toString().padStart(2, '0')}`;
+      finalEndDate = `31/${end_month.toString().padStart(2, '0')}`;
     }
 
     // Check if goal exists
@@ -137,10 +172,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
 
     const result = await query(
-      `INSERT INTO sub_goals (goal_id, title, hours_expected, start_month, end_month) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO sub_goals (goal_id, title, description, hours_expected, start_date, end_date, start_month, end_month)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [goal_id, title, hours_expected, start_month, end_month]
+      [goal_id, title, description, hours_expected, finalStartDate, finalEndDate, finalStartMonth, finalEndMonth]
     );
 
     res.status(201).json({
@@ -192,9 +227,13 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const existing = existingResult.rows[0];
     const updatedData = {
       title: updates.title ?? existing.title,
+      description: updates.description ?? existing.description,
       hours_expected: updates.hours_expected ?? existing.hours_expected,
-      start_month: updates.start_month ?? existing.start_month,
-      end_month: updates.end_month ?? existing.end_month,
+      start_date: updates.start_date ?? existing.start_date,
+      end_date: updates.end_date ?? existing.end_date,
+      // Legacy fields for backward compatibility
+      start_month: existing.start_month,
+      end_month: existing.end_month,
     };
 
     // Validation
@@ -206,29 +245,31 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (updatedData.start_month < 1 || updatedData.start_month > 12 || 
-        updatedData.end_month < 1 || updatedData.end_month > 12) {
-      res.status(400).json({
-        success: false,
-        error: 'Months must be between 1 and 12'
-      });
-      return;
-    }
-
-    if (updatedData.start_month > updatedData.end_month) {
-      res.status(400).json({
-        success: false,
-        error: 'Start month cannot be after end month'
-      });
-      return;
+    // Validate date format if provided
+    if (updatedData.start_date || updatedData.end_date) {
+      const dateRegex = /^\d{2}\/\d{2}$/;
+      if (updatedData.start_date && !dateRegex.test(updatedData.start_date)) {
+        res.status(400).json({
+          success: false,
+          error: 'Start date format must be DD/MM'
+        });
+        return;
+      }
+      if (updatedData.end_date && !dateRegex.test(updatedData.end_date)) {
+        res.status(400).json({
+          success: false,
+          error: 'End date format must be DD/MM'
+        });
+        return;
+      }
     }
 
     const result = await query(
-      `UPDATE sub_goals 
-       SET title = $1, hours_expected = $2, start_month = $3, end_month = $4, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5 
+      `UPDATE sub_goals
+       SET title = $1, description = $2, hours_expected = $3, start_date = $4, end_date = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
        RETURNING *`,
-      [updatedData.title, updatedData.hours_expected, updatedData.start_month, updatedData.end_month, id]
+      [updatedData.title, updatedData.description, updatedData.hours_expected, updatedData.start_date, updatedData.end_date, id]
     );
 
     res.json({

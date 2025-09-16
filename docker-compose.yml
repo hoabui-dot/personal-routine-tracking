@@ -2,8 +2,8 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: tracker_user
-      POSTGRES_PASSWORD: tracker_password
+      POSTGRES_USER: superuser
+      POSTGRES_PASSWORD: superuser
       POSTGRES_DB: personal_tracker
     ports:
       - "5433:5432"
@@ -11,7 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./api-service/sql:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tracker_user -d personal_tracker"]
+      test: ["CMD-SHELL", "pg_isready -U superuser -d personal_tracker"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,8 +26,8 @@ services:
       NODE_ENV: development
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: tracker_user
-      DB_PASSWORD: tracker_password
+      DB_USER: superuser
+      DB_PASSWORD: superuser
       DB_NAME: personal_tracker
     depends_on:
       db:
@@ -51,6 +51,20 @@ services:
       - ./web-frontend:/app
       - /app/node_modules
       - /app/.next
+
+  dozzle:
+    container_name: dozzle-agent-education
+    image: amir20/dozzle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "5555:5555"
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_TAILSIZE=300
+      - DOZZLE_AUTH=false
+    command: ["--addr=:5555"] 
+    restart: unless-stopped
 
 volumes:
   postgres_data:

@@ -14,12 +14,15 @@ CREATE TABLE IF NOT EXISTS sub_goals (
     id SERIAL PRIMARY KEY,
     goal_id INTEGER NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
+    description TEXT,
     hours_expected DECIMAL(5,2) NOT NULL CHECK (hours_expected > 0),
-    start_month INTEGER NOT NULL CHECK (start_month >= 1 AND start_month <= 12),
-    end_month INTEGER NOT NULL CHECK (end_month >= 1 AND end_month <= 12),
+    start_date VARCHAR(5), -- DD/MM format
+    end_date VARCHAR(5), -- DD/MM format
+    -- Legacy fields for backward compatibility
+    start_month INTEGER CHECK (start_month >= 1 AND start_month <= 12),
+    end_month INTEGER CHECK (end_month >= 1 AND end_month <= 12),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT valid_month_range CHECK (start_month <= end_month)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Sessions table

@@ -153,8 +153,8 @@ npm run format # Format with Prettier
 NODE_ENV=development
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=tracker_user
-DB_PASSWORD=tracker_password
+DB_USER=superuser
+DB_PASSWORD=superuser
 DB_NAME=personal_tracker
 PORT=4000
 ```

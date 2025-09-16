@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
+import SessionTimer from '@/components/SessionTimer';
 import { Goal } from '@/types/Goal';
 import { SubGoal, CreateSubGoalRequest } from '@/types/SubGoal';
 import { Session, SessionStats } from '@/types/Session';
@@ -31,9 +32,10 @@ export default function GoalDetail() {
   const [subGoalForm, setSubGoalForm] = useState<CreateSubGoalRequest>({
     goal_id: goalId || 0,
     title: '',
+    description: '',
     hours_expected: 0,
-    start_month: 1,
-    end_month: 12,
+    start_date: '01/01',
+    end_date: '31/12',
   });
   const [subGoalLoading, setSubGoalLoading] = useState(false);
 
@@ -132,9 +134,10 @@ export default function GoalDetail() {
       setSubGoalForm({
         goal_id: goalId,
         title: '',
+        description: '',
         hours_expected: 0,
-        start_month: 1,
-        end_month: 12,
+        start_date: '01/01',
+        end_date: '31/12',
       });
       setShowSubGoalForm(false);
       toast.success('Sub-goal created successfully!');
@@ -712,6 +715,51 @@ export default function GoalDetail() {
                         marginBottom: '0.5rem',
                       }}
                     >
+                      Description
+                    </label>
+                    <textarea
+                      value={subGoalForm.description}
+                      onChange={e =>
+                        setSubGoalForm(prev => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.15s ease-in-out',
+                        background: 'rgba(255, 255, 255, 0.8)',
+                        minHeight: '80px',
+                        resize: 'vertical',
+                      }}
+                      onFocus={e => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.boxShadow =
+                          '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                        e.target.style.outline = 'none';
+                      }}
+                      onBlur={e => {
+                        e.target.style.borderColor = '#e5e7eb';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      placeholder="Describe what you need to do for this sub-goal..."
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
                       Hours Expected
                     </label>
                     <input
@@ -748,98 +796,98 @@ export default function GoalDetail() {
                     />
                   </div>
 
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
-                      Start Month
-                    </label>
-                    <select
-                      value={subGoalForm.start_month}
-                      onChange={e =>
-                        setSubGoalForm(prev => ({
-                          ...prev,
-                          start_month: parseInt(e.target.value),
-                        }))
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        transition: 'all 0.15s ease-in-out',
-                        background: 'rgba(255, 255, 255, 0.8)',
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = '#3b82f6';
-                        e.target.style.outline = 'none';
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = '#e5e7eb';
-                      }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                        month => (
-                          <option key={month} value={month}>
-                            {getMonthName(month)}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
+                        Start Date (DD/MM)
+                      </label>
+                      <input
+                        type="text"
+                        value={subGoalForm.start_date}
+                        onChange={e =>
+                          setSubGoalForm(prev => ({
+                            ...prev,
+                            start_date: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.15s ease-in-out',
+                          background: 'rgba(255, 255, 255, 0.8)',
+                        }}
+                        onFocus={e => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow =
+                            '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                          e.target.style.outline = 'none';
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = '#e5e7eb';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                        placeholder="01/01"
+                        pattern="\d{2}/\d{2}"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
-                      End Month
-                    </label>
-                    <select
-                      value={subGoalForm.end_month}
-                      onChange={e =>
-                        setSubGoalForm(prev => ({
-                          ...prev,
-                          end_month: parseInt(e.target.value),
-                        }))
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        transition: 'all 0.15s ease-in-out',
-                        background: 'rgba(255, 255, 255, 0.8)',
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = '#3b82f6';
-                        e.target.style.outline = 'none';
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = '#e5e7eb';
-                      }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                        month => (
-                          <option key={month} value={month}>
-                            {getMonthName(month)}
-                          </option>
-                        )
-                      )}
-                    </select>
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
+                        End Date (DD/MM)
+                      </label>
+                      <input
+                        type="text"
+                        value={subGoalForm.end_date}
+                        onChange={e =>
+                          setSubGoalForm(prev => ({
+                            ...prev,
+                            end_date: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          transition: 'all 0.15s ease-in-out',
+                          background: 'rgba(255, 255, 255, 0.8)',
+                        }}
+                        onFocus={e => {
+                          e.target.style.borderColor = '#3b82f6';
+                          e.target.style.boxShadow =
+                            '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                          e.target.style.outline = 'none';
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = '#e5e7eb';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                        placeholder="31/12"
+                        pattern="\d{2}/\d{2}"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -966,6 +1014,11 @@ export default function GoalDetail() {
                   const activeSession = activeSessions[subGoal.id];
                   const stats = sessionStats[subGoal.id];
 
+                  // Check if sub-goal is completed
+                  const totalHours = parseFloat(String(stats?.total_hours || '0'));
+                  const targetHours = parseFloat(String(stats?.hours_expected || '0'));
+                  const isCompleted = totalHours >= targetHours;
+
                   return (
                     <div
                       key={subGoal.id}
@@ -1037,8 +1090,8 @@ export default function GoalDetail() {
                                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                                 />
                               </svg>
-                              {getMonthName(subGoal.start_month)} -{' '}
-                              {getMonthName(subGoal.end_month)}
+                              {subGoal.start_date || `${getMonthName(subGoal.start_month || 1)}`} -{' '}
+                              {subGoal.end_date || `${getMonthName(subGoal.end_month || 12)}`}
                             </span>
                             <span
                               style={{
@@ -1066,7 +1119,33 @@ export default function GoalDetail() {
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          {activeSession ? (
+                          {isCompleted ? (
+                            <div
+                              style={{
+                                background: 'linear-gradient(135deg, #059669, #10b981)',
+                                color: 'white',
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '0.75rem',
+                                fontSize: '1rem',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                border: '2px solid rgba(255, 255, 255, 0.2)',
+                              }}
+                            >
+                              <svg
+                                width="20"
+                                height="20"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              🎉 DONE
+                            </div>
+                          ) : activeSession ? (
                             <button
                               onClick={() => handleStopSession(subGoal.id)}
                               style={{
@@ -1148,85 +1227,14 @@ export default function GoalDetail() {
                         </div>
                       </div>
 
-                      {/* Progress Bar */}
+                      {/* Session Timer */}
                       {stats && (
                         <div style={{ marginBottom: '1rem' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              fontSize: '0.875rem',
-                              color: '#6b7280',
-                              marginBottom: '0.5rem',
-                            }}
-                          >
-                            <span>
-                              Progress: {parseFloat(String(stats.total_hours || '0')).toFixed(1)} /{' '}
-                              {stats.hours_expected} hours
-                            </span>
-                            <span
-                              style={{ fontWeight: '600', color: '#3b82f6' }}
-                            >
-                              {parseFloat(String(stats.completion_percentage || '0')).toFixed(1)}%
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              width: '100%',
-                              background: '#e5e7eb',
-                              borderRadius: '9999px',
-                              height: '0.5rem',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <div
-                              style={{
-                                background:
-                                  'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                                height: '100%',
-                                borderRadius: '9999px',
-                                transition: 'all 0.3s ease-in-out',
-                                width: `${Math.min(parseFloat(String(stats.completion_percentage || '0')), 100)}%`,
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Session Info */}
-                      {activeSession && (
-                        <div
-                          style={{
-                            background:
-                              'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                            border: '1px solid #bbf7d0',
-                            borderRadius: '0.5rem',
-                            padding: '0.75rem',
-                            fontSize: '0.875rem',
-                            marginBottom: '1rem',
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: '#16a34a',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: '0.5rem',
-                                height: '0.5rem',
-                                background: '#22c55e',
-                                borderRadius: '50%',
-                              }}
-                            ></div>
-                            Active session started at{' '}
-                            {new Date(
-                              activeSession.started_at
-                            ).toLocaleTimeString()}
-                          </span>
+                          <SessionTimer
+                            activeSession={activeSession}
+                            totalHours={parseFloat(String(stats.total_hours || '0'))}
+                            targetHours={parseFloat(String(stats.hours_expected || '0'))}
+                          />
                         </div>
                       )}
 
