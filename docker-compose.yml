@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: tracker_user
+      POSTGRES_PASSWORD: tracker_password
+      POSTGRES_DB: personal_tracker
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./api-service/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracker_user -d personal_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: tracker_user
+      DB_PASSWORD: tracker_password
+      DB_NAME: personal_tracker
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./api-service:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./web-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    depends_on:
+      - backend
+    volumes:
+      - ./web-frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
