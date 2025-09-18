@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
-import Layout from '@/components/Layout';
-import { Goal } from '@/types/Goal';
-import { SubGoal } from '@/types/SubGoal';
-import { goalsApi, subGoalsApi, sessionsApi } from '@/lib/api';
+import Layout from '../components/Layout';
+import { useTheme } from '../contexts/ThemeContext';
+import { goalsApi, subGoalsApi, sessionsApi } from '../lib/api';
+import { Goal, SubGoal } from '../types/Goal';
+import { Session } from '../types/Session';
 
 interface ReportData {
   totalGoals: number;
@@ -20,142 +21,166 @@ interface ReportData {
     completionRate: number;
     completedSubGoalsCount: number;
   }>;
+  streakData: {
+    currentStreak: number;
+    longestStreak: number;
+    streakDates: string[];
+  };
+  productivityInsights: {
+    mostProductiveHour: number;
+    mostProductiveDay: string;
+    averageFocusTime: number;
+    totalFocusTime: number;
+  };
+  weeklyPattern: Array<{
+    day: string;
+    hours: number;
+    sessions: number;
+  }>;
+  achievements: Array<{
+    id: string;
+    title: string;
+    description: string;
+    achieved: boolean;
+    progress: number;
+    icon: string;
+  }>;
 }
 
 export default function Reports() {
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { theme } = useTheme();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  const loadReportData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      // Load all goals for the selected year
-      const goals = await goalsApi.getAll(selectedYear);
-
-      let totalSubGoals = 0;
-      let completedSubGoals = 0;
-      let totalSessions = 0;
-      let totalHours = 0;
-      const goalProgress: Array<{
-        goal: Goal;
-        subGoals: SubGoal[];
-        totalHours: number;
-        completionRate: number;
-        completedSubGoalsCount: number;
-      }> = [];
-
-      for (const goal of goals) {
-        // Load sub-goals for each goal
-        const subGoals = await subGoalsApi.getByGoalId(goal.id);
-
-        totalSubGoals += subGoals.length;
-
-        let goalTotalHours = 0;
-        for (const subGoal of subGoals) {
-          // Load sessions for each sub-goal
-          const sessions = await sessionsApi.getBySubGoalId(subGoal.id);
-
-          totalSessions += sessions.length;
-
-          const subGoalHours = sessions.reduce((sum, session) => {
-            if (session.ended_at) {
-              const duration =
-                (new Date(session.ended_at).getTime() -
-                  new Date(session.started_at).getTime()) /
-                (1000 * 60 * 60);
-              return sum + duration;
-            }
-            return sum;
-          }, 0);
-
-          goalTotalHours += subGoalHours;
-        }
-
-        totalHours += goalTotalHours;
-
-        // Calculate completion rate based on hours spent vs expected
-        let completedSubGoalsCount = 0;
-        for (const subGoal of subGoals) {
-          const sessions = await sessionsApi.getBySubGoalId(subGoal.id);
-          const totalHoursSpent = sessions.reduce((sum, session) => {
-            if (session.ended_at) {
-              const duration =
-                (new Date(session.ended_at).getTime() -
-                  new Date(session.started_at).getTime()) /
-                (1000 * 60 * 60);
-              return sum + duration;
-            }
-            return sum;
-          }, 0);
-
-          // Consider completed if spent hours >= expected hours
-          if (totalHoursSpent >= subGoal.hours_expected) {
-            completedSubGoalsCount++;
-          }
-        }
-
-        completedSubGoals += completedSubGoalsCount;
-        const completionRate =
-          subGoals.length > 0
-            ? (completedSubGoalsCount / subGoals.length) * 100
-            : 0;
-
-        goalProgress.push({
-          goal,
-          subGoals,
-          totalHours: goalTotalHours,
-          completionRate,
-          completedSubGoalsCount,
-        });
-      }
-
-      const completedGoals = goals.filter(
-        g =>
-          goalProgress.find(gp => gp.goal.id === g.id)?.completionRate === 100
-      ).length;
-
-      const averageSessionDuration =
-        totalSessions > 0 ? totalHours / totalSessions : 0;
-
-      setReportData({
-        totalGoals: goals.length,
-        completedGoals,
-        totalSubGoals,
-        completedSubGoals,
-        totalSessions,
-        totalHours,
-        averageSessionDuration,
-        goalProgress,
-      });
-    } catch (err) {
-      console.error('Error loading report data:', err);
-      setError('Failed to load report data');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedYear]);
-
-  useEffect(() => {
-    loadReportData();
-  }, [loadReportData]);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const formatHours = (hours: number) => {
+    if (hours < 1) {
+      return `${Math.round(hours * 60)}m`;
+    }
     return `${hours.toFixed(1)}h`;
   };
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage.toFixed(1)}%`;
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch goals for the selected year
+        const goals = await goalsApi.getAll(selectedYear);
+
+        let totalSubGoals = 0;
+        let completedSubGoals = 0;
+        let totalSessions = 0;
+        let totalHours = 0;
+        let completedGoals = 0;
+        const goalProgress: Array<{
+          goal: Goal;
+          subGoals: SubGoal[];
+          totalHours: number;
+          completionRate: number;
+          completedSubGoalsCount: number;
+        }> = [];
+
+        // Process each goal
+        for (const goal of goals) {
+          const subGoals = await subGoalsApi.getByGoalId(goal.id);
+          totalSubGoals += subGoals.length;
+
+          let goalTotalHours = 0;
+          let completedSubGoalsCount = 0;
+
+          // Process each sub-goal
+          for (const subGoal of subGoals) {
+            if (subGoal.status === 'completed') {
+              completedSubGoals++;
+              completedSubGoalsCount++;
+            }
+
+            // Get sessions for this sub-goal
+            const sessions = await sessionsApi.getBySubGoalId(subGoal.id);
+            totalSessions += sessions.length;
+
+            const subGoalHours = sessions.reduce((sum, session) => {
+              return sum + (parseFloat(session.hours_spent?.toString() || '0') || 0);
+            }, 0);
+
+            goalTotalHours += subGoalHours;
+            totalHours += subGoalHours;
+          }
+
+          const completionRate = subGoals.length > 0
+            ? (completedSubGoalsCount / subGoals.length) * 100
+            : 0;
+
+          if (completionRate === 100) {
+            completedGoals++;
+          }
+
+          goalProgress.push({
+            goal,
+            subGoals,
+            totalHours: goalTotalHours,
+            completionRate,
+            completedSubGoalsCount,
+          });
+        }
+
+        const averageSessionDuration = totalSessions > 0 ? totalHours / totalSessions : 0;
+
+        setReportData({
+          totalGoals: goals.length,
+          completedGoals,
+          totalSubGoals,
+          completedSubGoals,
+          totalSessions,
+          totalHours,
+          averageSessionDuration,
+          goalProgress,
+          streakData: { currentStreak: 0, longestStreak: 0, streakDates: [] },
+          productivityInsights: {
+            mostProductiveHour: 9,
+            mostProductiveDay: 'Monday',
+            averageFocusTime: averageSessionDuration,
+            totalFocusTime: totalHours
+          },
+          weeklyPattern: [],
+          achievements: []
+        });
+
+      } catch (err) {
+        console.error('Error loading report data:', err);
+        setError('Failed to load report data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [selectedYear]);
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-lg">Loading reports...</div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              border: `4px solid ${theme.primary}`,
+              borderTop: '4px solid transparent',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
         </div>
       </Layout>
     );
@@ -164,8 +189,17 @@ export default function Reports() {
   if (error) {
     return (
       <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-red-600 text-lg">{error}</div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+            color: theme.error,
+            fontSize: '1.125rem',
+          }}
+        >
+          {error}
         </div>
       </Layout>
     );
@@ -177,180 +211,366 @@ export default function Reports() {
         <title>Reports - Personal Routine Tracker</title>
       </Head>
 
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Reports</h1>
+      <div style={{ minHeight: '100vh', padding: '32px 16px' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '32px',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  fontSize: '2.5rem',
+                  fontWeight: '800',
+                  color: theme.text,
+                  marginBottom: '8px',
+                }}
+              >
+                📊 Analytics Dashboard
+              </h1>
+              <p
+                style={{
+                  fontSize: '1.125rem',
+                  color: theme.textSecondary,
+                }}
+              >
+                Track your progress and insights
+              </p>
+            </div>
 
-          <div className="flex items-center gap-4">
-            <label
-              htmlFor="year-select"
-              className="text-sm font-medium text-gray-700"
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <label
+                htmlFor="year-select"
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: theme.text,
+                }}
+              >
+                Year:
+              </label>
+              <select
+                id="year-select"
+                value={selectedYear}
+                onChange={e => setSelectedYear(parseInt(e.target.value))}
+                style={{
+                  padding: '12px 16px',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '12px',
+                  background: theme.surface,
+                  color: theme.text,
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {Array.from(
+                  { length: 5 },
+                  (_, i) => new Date().getFullYear() - i
+                ).map(year => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: '16px',
+              padding: '32px',
+              border: `1px solid ${theme.border}`,
+              boxShadow: `0 4px 6px -1px ${theme.shadow}`,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: theme.text,
+                marginBottom: '24px',
+              }}
             >
-              Year:
-            </label>
-            <select
-              id="year-select"
-              value={selectedYear}
-              onChange={e => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Array.from(
-                { length: 5 },
-                (_, i) => new Date().getFullYear() - i
-              ).map(year => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+              📈 Reports Dashboard
+            </h2>
+
+            {reportData ? (
+              <>
+                {/* Overview Cards */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '24px',
+                    marginBottom: '32px',
+                  }}
+                >
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎯</div>
+                    <p
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        color: theme.primary,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {reportData.totalGoals}
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: theme.textSecondary }}>
+                      Total Goals
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⏱️</div>
+                    <p
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        color: theme.success,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {formatHours(reportData.totalHours)}
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: theme.textSecondary }}>
+                      Focus Time
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📊</div>
+                    <p
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        color: '#f59e0b',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {reportData.totalSessions}
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: theme.textSecondary }}>
+                      Total Sessions
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✅</div>
+                    <p
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        color: '#8b5cf6',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {reportData.completedGoals}
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: theme.textSecondary }}>
+                      Completed Goals
+                    </p>
+                  </div>
+                </div>
+
+                {/* Goal Progress Section */}
+                {reportData.goalProgress.length > 0 && (
+                  <div
+                    style={{
+                      background: theme.surface,
+                      borderRadius: '16px',
+                      padding: '24px',
+                      border: `1px solid ${theme.border}`,
+                      boxShadow: `0 4px 6px -1px ${theme.shadow}`,
+                      marginBottom: '32px',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: '700',
+                        color: theme.text,
+                        marginBottom: '16px',
+                      }}
+                    >
+                      🎯 Goal Progress
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {reportData.goalProgress.map((progress, index) => (
+                        <div
+                          key={progress.goal.id}
+                          style={{
+                            padding: '16px',
+                            background: theme.background,
+                            borderRadius: '12px',
+                            border: `1px solid ${theme.border}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <h4
+                              style={{
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                color: theme.text,
+                              }}
+                            >
+                              {progress.goal.title}
+                            </h4>
+                            <span
+                              style={{
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                color: progress.completionRate === 100 ? theme.success : theme.primary,
+                              }}
+                            >
+                              {progress.completionRate.toFixed(0)}%
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '8px',
+                              background: theme.border,
+                              borderRadius: '4px',
+                              overflow: 'hidden',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${progress.completionRate}%`,
+                                height: '100%',
+                                background: progress.completionRate === 100 ? theme.success : theme.primary,
+                                borderRadius: '4px',
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: '0.75rem',
+                              color: theme.textSecondary,
+                            }}
+                          >
+                            <span>
+                              {progress.completedSubGoalsCount}/{progress.subGoals.length} sub-goals
+                            </span>
+                            <span>{formatHours(progress.totalHours)} logged</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Productivity Insights */}
+                <div
+                  style={{
+                    background: theme.surface,
+                    borderRadius: '16px',
+                    padding: '24px',
+                    border: `1px solid ${theme.border}`,
+                    boxShadow: `0 4px 6px -1px ${theme.shadow}`,
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: theme.text,
+                      marginBottom: '16px',
+                    }}
+                  >
+                    💡 Productivity Insights
+                  </h3>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '16px',
+                    }}
+                  >
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>⏰</div>
+                      <p
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: theme.text,
+                          marginBottom: '2px',
+                        }}
+                      >
+                        {formatHours(reportData.averageSessionDuration)}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: theme.textSecondary }}>
+                        Avg Session
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🔥</div>
+                      <p
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: theme.text,
+                          marginBottom: '2px',
+                        }}
+                      >
+                        {reportData.totalSubGoals}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: theme.textSecondary }}>
+                        Sub-Goals
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>📈</div>
+                      <p
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: theme.text,
+                          marginBottom: '2px',
+                        }}
+                      >
+                        {reportData.totalSubGoals > 0
+                          ? ((reportData.completedSubGoals / reportData.totalSubGoals) * 100).toFixed(0)
+                          : 0}%
+                      </p>
+                      <p style={{ fontSize: '0.75rem', color: theme.textSecondary }}>
+                        Completion Rate
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <p style={{ color: theme.textSecondary }}>
+                  Loading report data...
+                </p>
+              </div>
+            )}
           </div>
         </div>
-
-        {reportData && (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                  Total Goals
-                </h3>
-                <p className="text-3xl font-bold text-blue-600">
-                  {reportData.totalGoals}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {reportData.completedGoals} completed (
-                  {formatPercentage(
-                    reportData.totalGoals > 0
-                      ? (reportData.completedGoals / reportData.totalGoals) *
-                          100
-                      : 0
-                  )}
-                  )
-                </p>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                  Sub-Goals
-                </h3>
-                <p className="text-3xl font-bold text-green-600">
-                  {reportData.totalSubGoals}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {reportData.completedSubGoals} completed (
-                  {formatPercentage(
-                    reportData.totalSubGoals > 0
-                      ? (reportData.completedSubGoals /
-                          reportData.totalSubGoals) *
-                          100
-                      : 0
-                  )}
-                  )
-                </p>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                  Total Hours
-                </h3>
-                <p className="text-3xl font-bold text-purple-600">
-                  {formatHours(reportData.totalHours)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {reportData.totalSessions} sessions
-                </p>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                  Avg Session
-                </h3>
-                <p className="text-3xl font-bold text-orange-600">
-                  {formatHours(reportData.averageSessionDuration)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">per session</p>
-              </div>
-            </div>
-
-            {/* Goal Progress */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                Goal Progress
-              </h2>
-
-              {reportData.goalProgress.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No goals found for {selectedYear}
-                </p>
-              ) : (
-                <div className="space-y-6">
-                  {reportData.goalProgress.map(
-                    ({
-                      goal,
-                      subGoals,
-                      totalHours,
-                      completionRate,
-                      completedSubGoalsCount,
-                    }) => (
-                      <div
-                        key={goal.id}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-800">
-                              {goal.title}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              Target Year: {goal.year}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-blue-600">
-                              {formatPercentage(completionRate)}
-                            </p>
-                            <p className="text-sm text-gray-500">completed</p>
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <div className="flex justify-between text-sm text-gray-600 mb-1">
-                            <span>Progress</span>
-                            <span>
-                              {completedSubGoalsCount} / {subGoals.length}{' '}
-                              sub-goals
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${completionRate}%` }}
-                            ></div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">Sub-goals: </span>
-                            <span className="font-medium">
-                              {subGoals.length}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Total hours: </span>
-                            <span className="font-medium">
-                              {formatHours(totalHours)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
       </div>
     </Layout>
   );

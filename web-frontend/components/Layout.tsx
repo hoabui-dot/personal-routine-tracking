@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTheme } from '../contexts/ThemeContext';
+import ThemeToggle from './ThemeToggle';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,6 +10,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
+  const { theme } = useTheme();
 
   const isActive = (path: string) => {
     if (path === '/' && router.pathname === '/') return true;
@@ -19,7 +22,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div
       className="min-h-screen"
       style={{
-        background: 'linear-gradient(135deg, #f9fafb 0%, #eff6ff 100%)',
+        background: theme.background,
+        color: theme.text,
+        transition: 'all 0.3s ease',
       }}
     >
       {/* Navigation Header */}
@@ -89,8 +94,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
 
+            {/* Desktop Theme Toggle */}
+            <div className="hidden sm:flex items-center">
+              <ThemeToggle />
+            </div>
+
             {/* Mobile menu button */}
-            <div className="sm:hidden flex items-center">
+            <div className="sm:hidden flex items-center gap-2">
+              <ThemeToggle />
               <button
                 type="button"
                 className="mobile-menu-button"
@@ -119,9 +130,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           className="sm:hidden hidden mobile-menu-modern"
           id="mobile-menu"
           style={{
-            background: 'rgba(255, 255, 255, 0.98)',
+            background: theme.surface,
             backdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(229, 231, 235, 0.8)',
+            borderTop: `1px solid ${theme.border}`,
           }}
         >
           <div className="px-3 pt-3 pb-4 space-y-2">
