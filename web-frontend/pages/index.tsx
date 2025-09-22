@@ -54,10 +54,10 @@ export default function Home() {
     }
   };
 
-  const handleEditGoal = (goal: Goal) => {
-    setEditingGoal(goal);
-    setIsEditModalOpen(true);
-  };
+  // const handleEditGoal = (goal: Goal) => {
+  //   setEditingGoal(goal);
+  //   setIsEditModalOpen(true);
+  // };
 
   const handleUpdateGoal = async (id: number, goalData: UpdateGoalRequest) => {
     try {
@@ -73,16 +73,16 @@ export default function Home() {
     }
   };
 
-  const handleDeleteGoal = async (id: number) => {
-    try {
-      await goalsApi.delete(id);
-      setGoals(prev => prev.filter(goal => goal.id !== id));
-      toast.success('Goal deleted successfully!');
-    } catch (error) {
-      toast.error('Failed to delete goal. Please try again.');
-      console.error('Error deleting goal:', error);
-    }
-  };
+  // const handleDeleteGoal = async (id: number) => {
+  //   try {
+  //     await goalsApi.delete(id);
+  //     setGoals(prev => prev.filter(goal => goal.id !== id));
+  //     toast.success('Goal deleted successfully!');
+  //   } catch (error) {
+  //     toast.error('Failed to delete goal. Please try again.');
+  //     console.error('Error deleting goal:', error);
+  //   }
+  // };
 
   const closeEditModal = () => {
     setIsEditModalOpen(false);

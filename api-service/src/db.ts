@@ -6,7 +6,7 @@ dotenv.config();
 // Database configuration
 const dbConfig = {
   host: process.env['DB_HOST'] || 'localhost',
-  port: parseInt(process.env['DB_PORT'] || '5433'),
+  port: parseInt(process.env['DB_PORT'] || '5432'),
   user: process.env['DB_USER'] || 'superuser',
   password: process.env['DB_PASSWORD'] || 'superuser',
   database: process.env['DB_NAME'] || 'personal_tracker',

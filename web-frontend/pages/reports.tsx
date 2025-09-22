@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
 import { useTheme } from '../contexts/ThemeContext';
 import { goalsApi, subGoalsApi, sessionsApi } from '../lib/api';
-import { Goal, SubGoal } from '../types/Goal';
-import { Session } from '../types/Session';
+import { Goal } from '../types/Goal';
+import { SubGoal } from '../types/SubGoal';
 
 interface ReportData {
   totalGoals: number;
@@ -93,10 +93,8 @@ export default function Reports() {
 
           // Process each sub-goal
           for (const subGoal of subGoals) {
-            if (subGoal.status === 'completed') {
-              completedSubGoals++;
-              completedSubGoalsCount++;
-            }
+            // For now, we don't have a status field, so we'll calculate completion based on sessions
+            // This can be enhanced later when status field is added to SubGoal
 
             // Get sessions for this sub-goal
             const sessions = await sessionsApi.getBySubGoalId(subGoal.id);
@@ -406,7 +404,7 @@ export default function Reports() {
                       🎯 Goal Progress
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {reportData.goalProgress.map((progress, index) => (
+                      {reportData.goalProgress.map((progress) => (
                         <div
                           key={progress.goal.id}
                           style={{

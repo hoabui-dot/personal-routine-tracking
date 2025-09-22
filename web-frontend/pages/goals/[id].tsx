@@ -650,7 +650,7 @@ export default function GoalDetail() {
                       subGoal={subGoalWithStats}
                       onStartSession={handleStartSession}
                       onStopSession={handleStopSession}
-                      onEdit={(subGoal) => {
+                      onEdit={(_subGoal) => {
                         toast.info('Edit functionality coming soon!');
                       }}
                       onDelete={async (subGoalId) => {

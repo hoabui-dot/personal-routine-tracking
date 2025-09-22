@@ -21,6 +21,7 @@ services:
       context: ./api-service
       dockerfile: Dockerfile
     image: vanhoadotbui2628/personal-tracker-api
+    platform: linux/amd64
     ports:
       - "4000:4000"
     environment:
@@ -42,6 +43,7 @@ services:
       context: ./web-frontend
       dockerfile: Dockerfile
     image: vanhoadotbui2628/personal-tracker-frontend
+    platform: linux/amd64
     ports:
       - "3000:3000"
     environment:
