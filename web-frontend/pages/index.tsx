@@ -6,8 +6,13 @@ import Layout from '@/components/Layout';
 import GoalForm from '@/components/GoalForm';
 import GoalCard from '@/components/GoalCard';
 import EditGoalModal from '@/components/EditGoalModal';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useToast } from '@/contexts/ToastContext';
+import CapybaraBanner from '@/components/CapybaraBanner';
+import CapybaraFloating from '@/components/CapybaraFloating';
+import CapybaraEmptyState from '@/components/CapybaraEmptyState';
+import CapybaraLoader from '@/components/CapybaraLoader';
 
 export default function Home() {
   const { theme } = useTheme();
@@ -90,7 +95,8 @@ export default function Home() {
   };
 
   return (
-    <Layout>
+    <ProtectedRoute>
+      <Layout>
       <Head>
         <title>Personal Tracker - Your Goals</title>
         <meta
@@ -101,37 +107,17 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div style={{ minHeight: '100vh', padding: '32px 16px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <h1
-              style={{
-                fontSize: '3rem',
-                fontWeight: '800',
-                background: `linear-gradient(135deg, ${theme.primary}, ${theme.primaryHover})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                marginBottom: '16px',
-                lineHeight: '1.2',
-              }}
-            >
-              Your Goals
-            </h1>
-            <p
-              style={{
-                fontSize: '1.125rem',
-                color: theme.textSecondary,
-                maxWidth: '600px',
-                margin: '0 auto',
-                lineHeight: '1.6',
-              }}
-            >
-              Transform your dreams into achievable goals. Track your progress
-              and celebrate your victories throughout the year.
-            </p>
-          </div>
+      <div style={{ minHeight: '100vh', padding: '32px 16px', position: 'relative' }}>
+        {/* Floating Capybara Decorations */}
+        <CapybaraFloating position="top-left" size={100} />
+        <CapybaraFloating position="bottom-right" size={140} />
+
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Header with Capybara Banner */}
+          <CapybaraBanner 
+            title="Your Goals" 
+            subtitle="Transform your dreams into achievable goals. Track your progress and celebrate your victories!"
+          />
 
           {/* Error Message */}
           {error && (
@@ -254,90 +240,14 @@ export default function Home() {
 
           {/* Goals Grid */}
           {loading ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '24px',
-              }}
-            >
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: theme.surface,
-                    borderRadius: '16px',
-                    padding: '24px',
-                    height: '200px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: `1px solid ${theme.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      border: `3px solid ${theme.primary}`,
-                      borderTop: '3px solid transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                    }}
-                  />
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
+              <CapybaraLoader text="Loading your goals..." />
             </div>
           ) : goals.length === 0 ? (
-            <div
-              style={{
-                background: theme.surface,
-                border: `2px dashed ${theme.border}`,
-                borderRadius: '16px',
-                padding: '48px',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  background: `linear-gradient(135deg, ${theme.primary}20, ${theme.primary}10)`,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 16px',
-                }}
-              >
-                <svg
-                  width="32"
-                  height="32"
-                  fill={theme.primary}
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
-              <h3
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: theme.text,
-                  marginBottom: '8px',
-                }}
-              >
-                No goals yet
-              </h3>
-              <p
-                style={{
-                  color: theme.textSecondary,
-                  fontSize: '0.875rem',
-                }}
-              >
-                Create your first goal above to get started on your journey!
-              </p>
-            </div>
+            <CapybaraEmptyState
+              title="No goals yet"
+              message="Create your first goal above to get started on your journey to success! 🎯"
+            />
           ) : (
             <div
               style={{
@@ -364,5 +274,6 @@ export default function Home() {
         </div>
       </div>
     </Layout>
+    </ProtectedRoute>
   );
 }

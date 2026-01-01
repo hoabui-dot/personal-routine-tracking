@@ -42,13 +42,14 @@ services:
     build:
       context: ./web-frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://13.210.111.152:4000
     image: vanhoadotbui2628/personal-tracker-frontend
     platform: linux/amd64
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:4000
     depends_on:
       - backend
     volumes:

@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { useTheme } from '../contexts/ThemeContext';
 import { goalsApi, subGoalsApi, sessionsApi } from '../lib/api';
 import { Goal } from '../types/Goal';
 import { SubGoal } from '../types/SubGoal';
+import CapybaraBanner from '../components/CapybaraBanner';
+import CapybaraFloating from '../components/CapybaraFloating';
+import CapybaraLoader from '../components/CapybaraLoader';
 
 interface ReportData {
   totalGoals: number;
@@ -160,95 +164,78 @@ export default function Reports() {
 
   if (loading) {
     return (
-      <Layout>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '50vh',
-          }}
-        >
+      <ProtectedRoute>
+        <Layout>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              border: `4px solid ${theme.primary}`,
-              borderTop: '4px solid transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '50vh',
             }}
-          />
-        </div>
-      </Layout>
+          >
+            <CapybaraLoader text="Loading your reports..." />
+          </div>
+        </Layout>
+      </ProtectedRoute>
     );
   }
 
   if (error) {
     return (
-      <Layout>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '50vh',
-            color: theme.error,
-            fontSize: '1.125rem',
-          }}
-        >
-          {error}
-        </div>
-      </Layout>
+      <ProtectedRoute>
+        <Layout>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '50vh',
+              color: theme.error,
+              fontSize: '1.125rem',
+            }}
+          >
+            {error}
+          </div>
+        </Layout>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <Layout>
-      <Head>
-        <title>Reports - Personal Routine Tracker</title>
-      </Head>
+    <ProtectedRoute>
+      <Layout>
+        <Head>
+          <title>Reports - Capybara Tracker</title>
+        </Head>
 
-      <div style={{ minHeight: '100vh', padding: '32px 16px' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '32px',
-              flexWrap: 'wrap',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  fontSize: '2.5rem',
-                  fontWeight: '800',
-                  color: theme.text,
-                  marginBottom: '8px',
-                }}
-              >
-                📊 Analytics Dashboard
-              </h1>
-              <p
-                style={{
-                  fontSize: '1.125rem',
-                  color: theme.textSecondary,
-                }}
-              >
-                Track your progress and insights
-              </p>
-            </div>
+        <div style={{ minHeight: '100vh', padding: '32px 16px', position: 'relative' }}>
+          {/* Floating Capybara Decorations */}
+          <CapybaraFloating position="top-left" size={90} />
+          <CapybaraFloating position="bottom-right" size={120} />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            {/* Capybara Banner */}
+            <CapybaraBanner 
+              title="Analytics Dashboard" 
+              subtitle="Track your progress and insights"
+            />
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                marginBottom: '24px',
+              }}
+            >
               <label
                 htmlFor="year-select"
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: '600',
                   color: theme.text,
+                  marginRight: '12px'
                 }}
               >
                 Year:
@@ -279,7 +266,6 @@ export default function Reports() {
                 ))}
               </select>
             </div>
-          </div>
 
           <div
             style={{
@@ -571,5 +557,6 @@ export default function Reports() {
         </div>
       </div>
     </Layout>
+    </ProtectedRoute>
   );
 }

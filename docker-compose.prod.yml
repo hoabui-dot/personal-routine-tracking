@@ -1,36 +1,7 @@
 # Production Docker Compose Configuration
-# Optimized for staging/production deployment on AWS EC2
+# Use with: docker-compose -f docker-compose.prod.yml up --build
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: service-database
-    environment:
-      POSTGRES_USER: superuser
-      POSTGRES_PASSWORD: superuser
-      POSTGRES_DB: personal_tracker
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U superuser -d personal_tracker"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - app-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   backend:
     container_name: service-backend
     image: vanhoadotbui2628/personal-tracker-api:latest
@@ -38,19 +9,16 @@ services:
       - "4000:4000"
     environment:
       NODE_ENV: production
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: superuser
-      DB_PASSWORD: superuser
-      DB_NAME: personal_tracker
+      DB_HOST: ${DB_HOST:-13.210.111.152}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-superuser}
+      DB_PASSWORD: ${DB_PASSWORD:-superuser}
+      DB_NAME: ${DB_NAME:-personal_tracker}
       PORT: 4000
       TZ: Asia/Ho_Chi_Minh
-    depends_on:
-      db:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://backend:4000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -69,7 +37,7 @@ services:
       context: ./web-frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://13.210.111.152:4000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://13.210.111.152:4000}
     image: vanhoadotbui2628/personal-tracker-frontend:latest
     ports:
       - "3000:3000"
@@ -122,7 +90,3 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-volumes:
-  postgres_data:
-    driver: local

@@ -6,6 +6,11 @@ import { testConnection } from './db';
 import goalsRouter from './routes/goals';
 import subGoalsRouter from './routes/subGoals';
 import sessionsRouter from './routes/sessions';
+import notesRouter from './routes/notes';
+import usersRouter from './routes/users';
+import userGoalsRouter from './routes/userGoals';
+import dailySessionsRouter from './routes/dailySessions';
+import authRouter from './routes/auth';
 
 // Load environment variables
 dotenv.config();
@@ -41,9 +46,14 @@ app.get('/health', (_req, res) => {
 });
 
 // API routes
+app.use('/auth', authRouter);
 app.use('/goals', goalsRouter);
 app.use('/sub-goals', subGoalsRouter);
 app.use('/sessions', sessionsRouter);
+app.use('/notes', notesRouter);
+app.use('/users', usersRouter);
+app.use('/user-goals', userGoalsRouter);
+app.use('/daily-sessions', dailySessionsRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
