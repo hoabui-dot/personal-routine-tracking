@@ -210,18 +210,21 @@ const GameCalendar: React.FC = () => {
 
   // Check if the logged-in user can perform actions for a specific user
   const canUserAct = (targetUserId: number): boolean => {
-    if (!authUser) return false;
+    if (!authUser) {
+      console.log('canUserAct: No authenticated user');
+      return false;
+    }
     
-    // Map email to user_id
-    // vanhoa.bui@example.com -> user_id: 2 (Văn Hoá)
-    // thaonhi241202@example.com -> user_id: 1 (Thảo Nhi)
-    const emailToUserId: Record<string, number> = {
-      'vanhoa.bui@example.com': 2,
-      'thaonhi241202@example.com': 1,
-    };
+    const canAct = authUser.id === targetUserId;
+    console.log('canUserAct:', {
+      loggedInUserId: authUser.id,
+      loggedInUserName: authUser.name,
+      targetUserId,
+      canAct
+    });
     
-    const loggedInUserId = emailToUserId[authUser.email];
-    return loggedInUserId === targetUserId;
+    // Check if the logged-in user's ID matches the target user ID
+    return canAct;
   };
 
   const handleStartSession = async (userId: number) => {
@@ -374,10 +377,20 @@ const GameCalendar: React.FC = () => {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   return (
-    <div style={{ minHeight: '100vh', background: theme.background, padding: '2rem 1rem', transition: 'all 0.3s ease' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: theme.background, 
+      padding: 'clamp(1rem, 3vw, 2rem) clamp(0.5rem, 2vw, 1rem)', 
+      transition: 'all 0.3s ease' 
+    }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ marginBottom: 'clamp(1rem, 3vw, 2rem)' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', 
+            gap: 'clamp(0.75rem, 2vw, 1rem)', 
+            marginBottom: 'clamp(1rem, 3vw, 2rem)' 
+          }}>
             {summary.map(s => {
               const user = users.find(u => (u.user_id as string) === (s.user_id as unknown as string));
               
@@ -393,8 +406,8 @@ const GameCalendar: React.FC = () => {
               return (
                 <div key={s.user_id} style={{
                   background: theme.cardBg,
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
+                  borderRadius: 'clamp(0.75rem, 2vw, 1rem)',
+                  padding: 'clamp(1rem, 3vw, 1.5rem)',
                   boxShadow: `0 4px 6px -1px ${theme.shadow}`,
                   border: `1px solid ${theme.border}`,
                   transition: 'all 0.3s ease'
@@ -403,20 +416,20 @@ const GameCalendar: React.FC = () => {
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '0.75rem',
-                    marginBottom: '1rem'
+                    gap: 'clamp(0.5rem, 1.5vw, 0.75rem)',
+                    marginBottom: 'clamp(0.75rem, 2vw, 1rem)'
                   }}>
                     {/* Avatar */}
                     <div style={{
-                      width: '40px',
-                      height: '40px',
+                      width: 'clamp(36px, 8vw, 40px)',
+                      height: 'clamp(36px, 8vw, 40px)',
                       borderRadius: '50%',
                       background: !user?.avatar_url ? `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` : 'transparent',
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '0.875rem',
+                      fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
                       fontWeight: '600',
                       flexShrink: 0,
                       boxShadow: `0 2px 6px ${theme.shadow}`,
@@ -444,23 +457,51 @@ const GameCalendar: React.FC = () => {
                     </div>
 
                     {/* User Name */}
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: theme.text, margin: 0 }}>
+                    <h3 style={{ 
+                      fontSize: 'clamp(1rem, 3vw, 1.25rem)', 
+                      fontWeight: '600', 
+                      color: theme.text, 
+                      margin: 0,
+                      wordBreak: 'break-word'
+                    }}>
                       {s.user_name}
                     </h3>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '2rem' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: 'clamp(1rem, 4vw, 2rem)',
+                    flexWrap: 'wrap'
+                  }}>
                     <div>
-                      <div style={{ fontSize: '2rem', fontWeight: '700', color: theme.success }}>
+                      <div style={{ 
+                        fontSize: 'clamp(1.5rem, 5vw, 2rem)', 
+                        fontWeight: '700', 
+                        color: theme.success 
+                      }}>
                         {s.total_done} ✅
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: theme.textSecondary }}>Completed</div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', 
+                        color: theme.textSecondary 
+                      }}>
+                        Completed
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '2rem', fontWeight: '700', color: theme.error }}>
+                      <div style={{ 
+                        fontSize: 'clamp(1.5rem, 5vw, 2rem)', 
+                        fontWeight: '700', 
+                        color: theme.error 
+                      }}>
                         {s.total_missed} ❌
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: theme.textSecondary }}>Missed</div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', 
+                        color: theme.textSecondary 
+                      }}>
+                        Missed
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -469,34 +510,54 @@ const GameCalendar: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr', 
+          gap: 'clamp(1rem, 3vw, 2rem)' 
+        }}
+        className="calendar-main-grid"
+        >
           <div style={{
             background: theme.cardBg,
-            borderRadius: '1.5rem',
+            borderRadius: 'clamp(1rem, 2.5vw, 1.5rem)',
             boxShadow: `0 10px 15px -3px ${theme.shadow}`,
-            padding: '2rem',
+            padding: 'clamp(1rem, 3vw, 2rem)',
             border: `1px solid ${theme.border}`,
             transition: 'all 0.3s ease'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: '600', color: theme.text }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              marginBottom: 'clamp(1rem, 3vw, 2rem)',
+              flexWrap: 'wrap',
+              gap: 'clamp(0.5rem, 2vw, 1rem)'
+            }}>
+              <h2 style={{ 
+                fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', 
+                fontWeight: '600', 
+                color: theme.text,
+                margin: 0
+              }}>
                 {monthNames[month]} {year}
               </h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: 'clamp(0.375rem, 1vw, 0.5rem)', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => {
                     setCurrentDate(new Date());
                     setSelectedDate(today);
                   }}
                   style={{
-                    padding: '0.625rem 1.25rem',
+                    padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.875rem, 2.5vw, 1.25rem)',
                     background: theme.surface,
                     border: `1px solid ${theme.border}`,
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontWeight: '500',
+                    fontSize: 'clamp(0.875rem, 2vw, 1rem)',
                     color: theme.text,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = theme.surfaceHover}
                   onMouseLeave={(e) => e.currentTarget.style.background = theme.surface}
@@ -506,7 +567,7 @@ const GameCalendar: React.FC = () => {
                 <button
                   onClick={() => setCurrentDate(new Date(year, month - 1))}
                   style={{
-                    padding: '0.625rem',
+                    padding: 'clamp(0.5rem, 1.5vw, 0.625rem)',
                     background: theme.surface,
                     border: `1px solid ${theme.border}`,
                     borderRadius: '0.5rem',
@@ -909,6 +970,20 @@ const GameCalendar: React.FC = () => {
             </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        @media (min-width: 1024px) {
+          .calendar-main-grid {
+            grid-template-columns: 1fr 400px !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .calendar-main-grid {
+            gap: 1rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

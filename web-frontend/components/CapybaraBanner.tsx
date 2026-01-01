@@ -18,9 +18,9 @@ const CapybaraBanner: React.FC<CapybaraBannerProps> = ({
   return (
     <div style={{
       background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
-      borderRadius: '1rem',
-      padding: '2rem',
-      marginBottom: '2rem',
+      borderRadius: 'clamp(0.75rem, 2vw, 1rem)',
+      padding: 'clamp(1rem, 4vw, 2rem)',
+      marginBottom: 'clamp(1rem, 3vw, 2rem)',
       boxShadow: `0 8px 16px ${theme.shadow}`,
       position: 'relative',
       overflow: 'hidden'
@@ -46,14 +46,15 @@ const CapybaraBanner: React.FC<CapybaraBannerProps> = ({
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        gap: '1.5rem'
+        gap: 'clamp(1rem, 3vw, 1.5rem)',
+        flexWrap: 'wrap'
       }}>
         {showIcon && (
           <div style={{
-            width: '4rem',
-            height: '4rem',
+            width: 'clamp(3rem, 10vw, 4rem)',
+            height: 'clamp(3rem, 10vw, 4rem)',
             background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '1rem',
+            borderRadius: 'clamp(0.75rem, 2vw, 1rem)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -61,40 +62,45 @@ const CapybaraBanner: React.FC<CapybaraBannerProps> = ({
             backdropFilter: 'blur(10px)',
             boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
           }}>
-            <CapybaraIcon size={48} />
+            <CapybaraIcon size={parseInt(getComputedStyle(document.documentElement).getPropertyValue('--icon-size') || '48')} />
           </div>
         )}
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: '200px' }}>
           <h1 style={{
-            fontSize: '2rem',
+            fontSize: 'clamp(1.25rem, 5vw, 2rem)',
             fontWeight: '700',
             color: 'white',
-            marginBottom: subtitle ? '0.5rem' : 0,
-            textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            marginBottom: subtitle ? 'clamp(0.25rem, 1vw, 0.5rem)' : 0,
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            lineHeight: 1.2
           }}>
             {title}
           </h1>
           {subtitle && (
             <p style={{
-              fontSize: '1.125rem',
+              fontSize: 'clamp(0.875rem, 3vw, 1.125rem)',
               color: 'rgba(255, 255, 255, 0.9)',
               fontWeight: '400',
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              lineHeight: 1.4
             }}>
               {subtitle}
             </p>
           )}
         </div>
 
-        {/* Decorative capybara silhouette */}
-        <div style={{
-          position: 'absolute',
-          right: '-20px',
-          bottom: '-20px',
-          opacity: 0.15,
-          pointerEvents: 'none'
-        }}>
+        {/* Decorative capybara silhouette - Hide on small screens */}
+        <div 
+          className="decorative-capybara"
+          style={{
+            position: 'absolute',
+            right: '-20px',
+            bottom: '-20px',
+            opacity: 0.15,
+            pointerEvents: 'none'
+          }}
+        >
           <svg
             width="150"
             height="150"
@@ -109,6 +115,14 @@ const CapybaraBanner: React.FC<CapybaraBannerProps> = ({
           </svg>
         </div>
       </div>
+      
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .decorative-capybara {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,8 +1,10 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './db';
+import { initializeSocket } from './socket';
 import goalsRouter from './routes/goals';
 import subGoalsRouter from './routes/subGoals';
 import sessionsRouter from './routes/sessions';
@@ -16,7 +18,11 @@ import authRouter from './routes/auth';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env['PORT'] || 4000;
+
+// Initialize Socket.IO
+initializeSocket(httpServer);
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -84,10 +90,11 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Personal Tracker API server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🎯 Goals API: http://localhost:${PORT}/goals`);
+      console.log(`💬 WebSocket chat enabled`);
       console.log(`🌍 Environment: ${process.env['NODE_ENV'] || 'development'}`);
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import CapybaraIcon from '../components/CapybaraIcon';
@@ -202,19 +203,19 @@ const LoginPage: React.FC = () => {
             </button>
 
             <div style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-              <a 
+              <Link 
                 href="/forgot-password" 
                 style={{ color: theme.primary, textDecoration: 'none', fontWeight: '500' }}
               >
                 Forgot password?
-              </a>
+              </Link>
               <span style={{ color: theme.textSecondary, margin: '0 0.5rem' }}>•</span>
-              <a 
+              <Link 
                 href="/register" 
                 style={{ color: theme.primary, textDecoration: 'none', fontWeight: '500' }}
               >
                 Create account
-              </a>
+              </Link>
             </div>
           </form>
         </div>
