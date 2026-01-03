@@ -30,7 +30,7 @@ const GameCalendar: React.FC = () => {
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [selectedSubTaskByUser, setSelectedSubTaskByUser] = useState<Record<number, number | null>>({});
   const [allSubTasks, setAllSubTasks] = useState<GoalSubTask[]>([]);
-  const [timeRemainingByUser, setTimeRemainingByUser] = useState<Record<number, number>>({});
+  const [timeElapsedByUser, setTimeElapsedByUser] = useState<Record<number, number>>({});
   const [sessionStatusByUser, setSessionStatusByUser] = useState<Record<string, 'IN_PROGRESS' | 'PAUSED' | 'DONE' | 'MISSED'>>({});
   const [initialized, setInitialized] = useState(false);
   const toast = useToast();
@@ -136,6 +136,10 @@ const GameCalendar: React.FC = () => {
     if (initialized) return;
     
     try {
+      // Load sub-tasks first so they're available for initialization
+      const subTasksData = await gameApi.getGoalSubTasks();
+      setAllSubTasks(subTasksData);
+      
       const result = await gameApi.checkAndCleanup();
       
       if (result.cleanedUp > 0) {
@@ -143,7 +147,7 @@ const GameCalendar: React.FC = () => {
       }
       
       const goals = await gameApi.getUserGoals();
-      const newTimeRemaining: Record<number, number> = {};
+      const newTimeElapsed: Record<number, number> = {};
       const newSessionStatus: Record<string, 'IN_PROGRESS' | 'PAUSED' | 'DONE' | 'MISSED'> = {};
       
       if (result.sessions && result.sessions.length > 0) {
@@ -165,9 +169,22 @@ const GameCalendar: React.FC = () => {
                 activeElapsed = elapsedBeforePause - pausedSeconds;
               }
               
-              const required = userGoal.daily_duration_minutes * 60;
-              const remaining = Math.max(0, required - activeElapsed);
-              newTimeRemaining[session.user_id] = remaining;
+              // Store elapsed time (count up)
+              newTimeElapsed[session.user_id] = activeElapsed;
+              
+              // Determine target duration for logging
+              let required = userGoal.daily_duration_minutes * 60;
+              if (session.sub_task_id) {
+                const subTask = subTasksData.find(st => st.id === session.sub_task_id);
+                if (subTask) {
+                  required = subTask.duration_minutes * 60;
+                  console.log(`[Init] Using sub-task duration for user ${session.user_id}: ${subTask.duration_minutes}min (${subTask.title})`);
+                } else {
+                  console.warn(`[Init] Sub-task ${session.sub_task_id} not found, using goal duration`);
+                }
+              }
+              
+              console.log(`[Init] User ${session.user_id}: target=${required}s, elapsed=${activeElapsed}s`);
               
               // Use date-aware key for session status
               const statusKey = `${session.user_id}-${session.date}`;
@@ -177,7 +194,7 @@ const GameCalendar: React.FC = () => {
         });
       }
       
-      setTimeRemainingByUser(newTimeRemaining);
+      setTimeElapsedByUser(newTimeElapsed);
       setSessionStatusByUser(newSessionStatus);
       setInitialized(true);
     } catch (error) {
@@ -222,7 +239,7 @@ const GameCalendar: React.FC = () => {
     const handleComplete = async (sessionId: number, userId: number) => {
       try {
         await gameApi.completeSession(sessionId);
-        setTimeRemainingByUser(prev => {
+        setTimeElapsedByUser(prev => {
           const updated = { ...prev };
           delete updated[userId];
           return updated;
@@ -252,7 +269,7 @@ const GameCalendar: React.FC = () => {
     };
 
     const updateTimers = () => {
-      const newTimeRemaining: Record<number, number> = {};
+      const newTimeElapsed: Record<number, number> = {};
       
       activeSessions.forEach(session => {
         const userGoal = userGoals.find(ug => ug.user_id === session.user_id);
@@ -273,17 +290,11 @@ const GameCalendar: React.FC = () => {
           activeElapsed = elapsedBeforePause - pausedSeconds;
         }
         
-        const required = userGoal.daily_duration_minutes * 60;
-        const remaining = Math.max(0, required - activeElapsed);
-
-        newTimeRemaining[session.user_id] = remaining;
-
-        if (remaining === 0 && session.status === 'IN_PROGRESS') {
-          handleComplete(session.id, session.user_id);
-        }
+        // Store elapsed time (count up)
+        newTimeElapsed[session.user_id] = activeElapsed;
       });
       
-      setTimeRemainingByUser(newTimeRemaining);
+      setTimeElapsedByUser(newTimeElapsed);
     };
 
     updateTimers();
@@ -346,10 +357,10 @@ const GameCalendar: React.FC = () => {
 
     // Immediate UI update (optimistic)
     if (userGoal) {
-      const initialTime = userGoal.daily_duration_minutes * 60;
-      setTimeRemainingByUser(prev => ({
+      // Start with 0 elapsed time
+      setTimeElapsedByUser(prev => ({
         ...prev,
-        [userId]: initialTime
+        [userId]: 0
       }));
       const statusKey = `${userId}-${selectedDate}`;
       setSessionStatusByUser(prev => ({
@@ -383,7 +394,7 @@ const GameCalendar: React.FC = () => {
     if (!confirmed) return;
     
     // Immediate UI update (optimistic)
-    setTimeRemainingByUser(prev => {
+    setTimeElapsedByUser(prev => {
       const updated = { ...prev };
       delete updated[userId];
       return updated;
@@ -489,15 +500,50 @@ const GameCalendar: React.FC = () => {
   };
 
   const getProgressPercentage = (userId: number) => {
-    const timeRemaining = timeRemainingByUser[userId];
-    if (timeRemaining === undefined) return 0;
+    const timeElapsed = timeElapsedByUser[userId];
+    if (timeElapsed === undefined) return 0;
     
     const userGoal = userGoals.find(ug => ug.user_id === userId);
     if (!userGoal) return 0;
 
-    const required = userGoal.daily_duration_minutes * 60;
-    const elapsed = required - timeRemaining;
-    return Math.min((elapsed / required) * 100, 100);
+    // Get the session to check if it has a sub-task
+    const session = sessions.find(s => s.user_id === userId && s.date === today);
+    let required = userGoal.daily_duration_minutes * 60;
+    
+    if (session?.sub_task_id) {
+      const subTask = allSubTasks.find(st => st.id === session.sub_task_id);
+      if (subTask) {
+        required = subTask.duration_minutes * 60;
+      }
+    }
+
+    // Calculate percentage (can go over 100% for overtime)
+    const percentage = (timeElapsed / required) * 100;
+    return Math.min(percentage, 150); // Cap at 150% for display
+  };
+
+  const getTargetDuration = (userId: number): number => {
+    const userGoal = userGoals.find(ug => ug.user_id === userId);
+    if (!userGoal) return 0;
+
+    const session = sessions.find(s => s.user_id === userId && s.date === today);
+    let required = userGoal.daily_duration_minutes * 60;
+    
+    if (session?.sub_task_id) {
+      const subTask = allSubTasks.find(st => st.id === session.sub_task_id);
+      if (subTask) {
+        required = subTask.duration_minutes * 60;
+      }
+    }
+
+    return required;
+  };
+
+  const isOvertime = (userId: number): boolean => {
+    const elapsed = timeElapsedByUser[userId];
+    if (elapsed === undefined) return false;
+    const target = getTargetDuration(userId);
+    return elapsed > target;
   };
 
   const days = getDaysInMonth();
@@ -628,6 +674,21 @@ const GameCalendar: React.FC = () => {
                         color: theme.textSecondary 
                       }}>
                         Missed
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ 
+                        fontSize: 'clamp(1.5rem, 5vw, 2rem)', 
+                        fontWeight: '700', 
+                        color: theme.primary 
+                      }}>
+                        {s.total_hours_worked}h ⏱️
+                      </div>
+                      <div style={{ 
+                        fontSize: 'clamp(0.75rem, 2vw, 0.875rem)', 
+                        color: theme.textSecondary 
+                      }}>
+                        Total Hours
                       </div>
                     </div>
                   </div>
@@ -857,7 +918,9 @@ const GameCalendar: React.FC = () => {
                 const session = getSessionForDate(user.id, selectedDate);
                 const showTimer = shouldShowTimer(user.id, selectedDate, session);
                 const sessionId = session?.id;
-                const timeRemaining = timeRemainingByUser[user.id] || 0;
+                const timeElapsed = timeElapsedByUser[user.id] || 0;
+                const targetDuration = getTargetDuration(user.id);
+                const overtime = isOvertime(user.id);
                 const currentStatus = getCurrentSessionStatus(user.id, selectedDate, session);
                 
                 // Get sub-tasks for this user's goal
@@ -966,12 +1029,14 @@ const GameCalendar: React.FC = () => {
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between'
+                            justifyContent: 'space-between',
+                            marginBottom: '0.5rem'
                           }}>
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem'
+                              gap: '0.5rem',
+                              flex: 1
                             }}>
                               <svg
                                 width="24"
@@ -982,7 +1047,7 @@ const GameCalendar: React.FC = () => {
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                style={{ color: session?.status === 'PAUSED' ? '#f59e0b' : '#10b981' }}
+                                style={{ color: currentStatus === 'PAUSED' ? '#f59e0b' : overtime ? '#ef4444' : '#10b981' }}
                               >
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12,6 12,12 16,14" />
@@ -991,17 +1056,27 @@ const GameCalendar: React.FC = () => {
                                 fontSize: '2rem',
                                 fontWeight: '700',
                                 fontFamily: 'monospace',
-                                color: currentStatus === 'PAUSED' ? '#f59e0b' : '#10b981'
+                                color: currentStatus === 'PAUSED' ? '#f59e0b' : overtime ? '#ef4444' : '#10b981'
                               }}>
-                                {formatTime(timeRemaining)}
+                                {formatTime(timeElapsed)}
                               </span>
                             </div>
                             <div style={{
-                              fontSize: '0.75rem',
+                              fontSize: '0.875rem',
                               color: '#64748b',
-                              textAlign: 'right'
+                              textAlign: 'right',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end'
                             }}>
-                              remaining
+                              <div style={{ fontWeight: '600' }}>
+                                Target: {formatTime(targetDuration)}
+                              </div>
+                              {overtime && (
+                                <div style={{ color: '#ef4444', fontWeight: '600', fontSize: '0.75rem' }}>
+                                  +{formatTime(timeElapsed - targetDuration)} overtime
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1023,13 +1098,16 @@ const GameCalendar: React.FC = () => {
 
                           <div style={{
                             fontSize: '0.75rem',
-                            color: currentStatus === 'PAUSED' ? theme.warning : theme.success,
-                            textAlign: 'center'
+                            color: currentStatus === 'PAUSED' ? theme.warning : overtime ? theme.error : theme.success,
+                            textAlign: 'center',
+                            fontWeight: '600'
                           }}>
                             {currentStatus === 'PAUSED' ? (
                               <>⏸️ <strong>PAUSED</strong></>
+                            ) : overtime ? (
+                              <>🔥 <strong>OVERTIME - Keep going!</strong></>
                             ) : (
-                              <>⏱️ <strong>COUNTING DOWN</strong></>
+                              <>⏱️ <strong>IN PROGRESS</strong></>
                             )}
                           </div>
 

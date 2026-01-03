@@ -21,6 +21,7 @@ router.get('/', async (req: Request, res: Response) => {
         ds.total_paused_seconds,
         ds.duration_completed_minutes,
         ds.status,
+        ds.sub_task_id,
         ds.created_at,
         ds.updated_at,
         u.name as user_name
@@ -80,7 +81,9 @@ router.get('/summary', async (req: Request, res: Response) => {
         u.id as user_id,
         u.name as user_name,
         COUNT(CASE WHEN ds.status = 'DONE' THEN 1 END) as total_done,
-        COUNT(CASE WHEN ds.status = 'MISSED' THEN 1 END) as total_missed
+        COUNT(CASE WHEN ds.status = 'MISSED' THEN 1 END) as total_missed,
+        COALESCE(SUM(ds.duration_completed_minutes), 0) as total_minutes_worked,
+        ROUND(COALESCE(SUM(ds.duration_completed_minutes), 0) / 60.0, 1) as total_hours_worked
       FROM users u
       LEFT JOIN daily_sessions ds ON u.id = ds.user_id ${goalId ? 'AND ds.goal_id = $1' : ''}
       GROUP BY u.id, u.name
@@ -510,6 +513,7 @@ router.post('/check-and-cleanup', async (_, res: Response) => {
         ds.total_paused_seconds,
         ds.duration_completed_minutes,
         ds.status,
+        ds.sub_task_id,
         ds.created_at,
         ds.updated_at,
         u.name as user_name

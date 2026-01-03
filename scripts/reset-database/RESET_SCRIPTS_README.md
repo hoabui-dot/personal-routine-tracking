@@ -10,6 +10,38 @@ These scripts help you reset/remove test data from the database when you need to
 
 ## Available Scripts
 
+### 0. Full Database Reset (`full-database-reset.sh`) ⚠️ DANGER
+
+**⚠️ WARNING: This will DELETE ALL DATA and recreate the entire database!**
+
+Drops all tables and runs all migrations from scratch to ensure a clean database state.
+
+**Usage:**
+```bash
+./full-database-reset.sh
+```
+
+**What it does:**
+- Drops ALL tables (goals, users, sessions, sub-tasks, chat, etc.)
+- Runs all 10+ migrations in correct order
+- Creates cron_config table
+- Verifies all tables and critical columns exist
+- Shows database summary
+
+**When to use:**
+- Database schema is corrupted or inconsistent
+- Missing tables or columns after updates
+- Need a completely fresh start
+- Testing full database initialization
+
+**Safety:**
+- Requires typing "RESET" to confirm (not just "yes")
+- Shows detailed progress for each migration
+- Verifies schema after completion
+- Fails fast if any migration has errors
+
+---
+
 ### 1. Reset Single Date (`reset-date.sh`)
 
 Removes all session data for a specific date.

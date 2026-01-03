@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { testConnection } from './db';
 import { initializeSocket } from './socket';
+import { initializeCronJobs } from './services/cronService';
 import goalsRouter from './routes/goals';
 import subGoalsRouter from './routes/subGoals';
 import sessionsRouter from './routes/sessions';
@@ -13,6 +14,8 @@ import userGoalsRouter from './routes/userGoals';
 import dailySessionsRouter from './routes/dailySessions';
 import goalSubTasksRouter from './routes/goalSubTasks';
 import authRouter from './routes/auth';
+import cronTestRouter from './routes/cronTest';
+import cronConfigRouter from './routes/cronConfig';
 import { env } from './env';
 
 const app = express();
@@ -24,13 +27,12 @@ initializeSocket(httpServer);
 
 // Middleware
 app.use(helmet()); // Security headers
-app.use(cors({
-  origin: [
-    env.FRONTEND_URL,
-    'http://localhost:3001'
-  ],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: [env.FRONTEND_URL, 'http://localhost:3001'],
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -59,6 +61,8 @@ app.use('/users', usersRouter);
 app.use('/user-goals', userGoalsRouter);
 app.use('/daily-sessions', dailySessionsRouter);
 app.use('/goal-sub-tasks', goalSubTasksRouter);
+app.use('/cron-test', cronTestRouter);
+app.use('/cron-config', cronConfigRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -70,14 +74,21 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-    ...(env.NODE_ENV === 'development' && { details: err.message }),
-  });
-});
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      ...(env.NODE_ENV === 'development' && { details: err.message }),
+    });
+  }
+);
 
 // Start server
 const startServer = async () => {
@@ -95,6 +106,9 @@ const startServer = async () => {
       console.log(`🎯 Goals API: http://localhost:${PORT}/goals`);
       console.log(`💬 WebSocket chat enabled`);
       console.log(`🌍 Environment: ${env.NODE_ENV}`);
+
+      // Initialize cron jobs after server starts
+      initializeCronJobs();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

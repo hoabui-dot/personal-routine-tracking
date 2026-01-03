@@ -21,9 +21,21 @@ interface GoalFormData {
   year: number;
 }
 
+interface CronJob {
+  id: number;
+  job_name: string;
+  cron_expression: string;
+  enabled: boolean;
+  description: string;
+  last_run: string | null;
+  next_run: string | null;
+}
+
 const Settings: React.FC = () => {
   const { theme } = useTheme();
   const [groupedGoals, setGroupedGoals] = useState<GroupedGoal[]>([]);
+  const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
+  const [editingCron, setEditingCron] = useState<{ job_name: string; hour: number; minute: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
@@ -41,7 +53,7 @@ const Settings: React.FC = () => {
     try {
       console.log('[Settings] Starting to load data...');
       
-      const [userGoals, allSubTasks, goals] = await Promise.all([
+      const [userGoals, allSubTasks, goals, cronJobsData] = await Promise.all([
         gameApi.getUserGoals().then(data => {
           console.log('[Settings] User goals loaded:', data.length);
           return data;
@@ -57,9 +69,19 @@ const Settings: React.FC = () => {
           console.error('[Settings] Failed to fetch goals:', err);
           return []; // Return empty array if goals fetch fails
         }),
+        fetch('/api/cron-config').then(res => res.json()).then(data => {
+          console.log('[Settings] Cron jobs loaded:', data.data?.length || 0);
+          return data.success ? data.data : [];
+        }).catch(err => {
+          console.error('[Settings] Failed to fetch cron jobs:', err);
+          return [];
+        }),
       ]);
 
       console.log('[Settings] All data loaded, grouping...');
+
+      // Set cron jobs
+      setCronJobs(cronJobsData);
 
       // Group by goal
       const grouped: Record<number, GroupedGoal> = {};
@@ -215,6 +237,65 @@ const Settings: React.FC = () => {
       toast.success('Goal deleted successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete goal');
+    }
+  };
+
+  // Parse cron expression to get hour and minute
+  const parseCronExpression = (expression: string): { hour: number; minute: number } => {
+    const parts = expression.split(' ');
+    return {
+      minute: parseInt(parts[0]) || 0,
+      hour: parseInt(parts[1]) || 0,
+    };
+  };
+
+  // Convert hour and minute to cron expression
+  const toCronExpression = (hour: number, minute: number): string => {
+    return `${minute} ${hour} * * *`;
+  };
+
+  const handleUpdateCronSchedule = async (jobName: string, hour: number, minute: number) => {
+    try {
+      const cronExpression = toCronExpression(hour, minute);
+      
+      const response = await fetch(`/api/cron-config/${jobName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cron_expression: cronExpression }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update schedule');
+      }
+      
+      setEditingCron(null);
+      await loadData(true);
+      toast.success('Cron schedule updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update cron schedule');
+    }
+  };
+
+  const handleToggleCronJob = async (jobName: string, enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/cron-config/${jobName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to toggle job');
+      }
+      
+      await loadData(true);
+      toast.success(`Cron job ${enabled ? 'enabled' : 'disabled'} successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to toggle cron job');
     }
   };
 
@@ -846,6 +927,232 @@ const Settings: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Cron Jobs Section */}
+              <div style={{
+                marginTop: '3rem',
+                background: theme.surface,
+                borderRadius: '1.5rem',
+                boxShadow: `0 10px 25px ${theme.shadow}`,
+                padding: '2.5rem',
+                border: `1px solid ${theme.border}`
+              }}>
+                <h2 style={{
+                  fontSize: '1.75rem',
+                  fontWeight: '700',
+                  color: theme.text,
+                  marginBottom: '0.5rem'
+                }}>
+                  ⏰ Scheduled Jobs
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: theme.textSecondary,
+                  marginBottom: '2rem'
+                }}>
+                  Manage automated tasks that run at specific times each day.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {cronJobs.map(job => {
+                    const { hour, minute } = parseCronExpression(job.cron_expression);
+                    const isEditing = editingCron?.job_name === job.job_name;
+                    const displayName = job.job_name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    
+                    return (
+                      <div key={job.job_name} style={{
+                        background: theme.background,
+                        borderRadius: '1rem',
+                        border: `2px solid ${theme.border}`,
+                        padding: '1.5rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '1rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div style={{ flex: '1 1 300px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                              <h3 style={{
+                                fontSize: '1.125rem',
+                                fontWeight: '600',
+                                color: theme.text,
+                                margin: 0
+                              }}>
+                                {displayName}
+                              </h3>
+                              <label style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                gap: '0.5rem'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  checked={job.enabled}
+                                  onChange={(e) => handleToggleCronJob(job.job_name, e.target.checked)}
+                                  style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                                <span style={{
+                                  fontSize: '0.875rem',
+                                  color: job.enabled ? theme.success : theme.textSecondary,
+                                  fontWeight: '500'
+                                }}>
+                                  {job.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </label>
+                            </div>
+                            <p style={{
+                              fontSize: '0.875rem',
+                              color: theme.textSecondary,
+                              margin: '0 0 0.75rem 0',
+                              lineHeight: '1.5'
+                            }}>
+                              {job.description}
+                            </p>
+                            {job.last_run && (
+                              <p style={{
+                                fontSize: '0.75rem',
+                                color: theme.textSecondary,
+                                margin: 0
+                              }}>
+                                Last run: {new Date(job.last_run).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+
+                          <div style={{ flex: '0 0 auto' }}>
+                            {isEditing ? (
+                              <div style={{
+                                display: 'flex',
+                                gap: '0.75rem',
+                                alignItems: 'center',
+                                flexWrap: 'wrap'
+                              }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="23"
+                                    value={editingCron.hour}
+                                    onChange={(e) => setEditingCron({ ...editingCron, hour: parseInt(e.target.value) || 0 })}
+                                    style={{
+                                      width: '60px',
+                                      padding: '0.5rem',
+                                      fontSize: '1rem',
+                                      border: `2px solid ${theme.border}`,
+                                      borderRadius: '0.5rem',
+                                      background: theme.surface,
+                                      color: theme.text,
+                                      textAlign: 'center'
+                                    }}
+                                  />
+                                  <span style={{ color: theme.text, fontWeight: '600' }}>:</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    value={editingCron.minute}
+                                    onChange={(e) => setEditingCron({ ...editingCron, minute: parseInt(e.target.value) || 0 })}
+                                    style={{
+                                      width: '60px',
+                                      padding: '0.5rem',
+                                      fontSize: '1rem',
+                                      border: `2px solid ${theme.border}`,
+                                      borderRadius: '0.5rem',
+                                      background: theme.surface,
+                                      color: theme.text,
+                                      textAlign: 'center'
+                                    }}
+                                  />
+                                </div>
+                                <button
+                                  onClick={() => handleUpdateCronSchedule(editingCron.job_name, editingCron.hour, editingCron.minute)}
+                                  style={{
+                                    padding: '0.5rem 1rem',
+                                    background: theme.success,
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '0.5rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600'
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingCron(null)}
+                                  style={{
+                                    padding: '0.5rem 1rem',
+                                    background: theme.border,
+                                    color: theme.text,
+                                    border: 'none',
+                                    borderRadius: '0.5rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.875rem'
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                <div style={{
+                                  padding: '0.75rem 1.25rem',
+                                  background: `linear-gradient(135deg, ${theme.primary}15, ${theme.accent}15)`,
+                                  borderRadius: '0.75rem',
+                                  border: `2px solid ${theme.primary}30`
+                                }}>
+                                  <div style={{
+                                    fontSize: '1.5rem',
+                                    fontWeight: '700',
+                                    color: theme.primary,
+                                    textAlign: 'center'
+                                  }}>
+                                    {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    color: theme.textSecondary,
+                                    textAlign: 'center',
+                                    marginTop: '0.25rem'
+                                  }}>
+                                    Daily
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setEditingCron({ job_name: job.job_name, hour, minute })}
+                                  style={{
+                                    padding: '0.75rem 1.25rem',
+                                    background: theme.primary,
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '0.5rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    boxShadow: `0 4px 8px ${theme.shadow}`,
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                >
+                                  ✏️ Edit Time
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={{

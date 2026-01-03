@@ -48,4 +48,6 @@ export interface GameSummary {
   user_name: string;
   total_done: number;
   total_missed: number;
+  total_minutes_worked: number;
+  total_hours_worked: number;
 }
