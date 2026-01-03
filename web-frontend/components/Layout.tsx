@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import CapybaraIcon from './CapybaraIcon';
+import Snowflakes from './Snowflakes';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, currentTheme } = useTheme();
   const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,14 +51,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: theme.background,
-        color: theme.text,
-        transition: 'all 0.3s ease',
-      }}
-    >
+    <>
+      {/* Snowflakes animation for Christmas theme */}
+      {currentTheme === 'christmas' && <Snowflakes />}
+      
+      <div
+        className="min-h-screen"
+        style={{
+          background: theme.background,
+          color: theme.text,
+          transition: 'all 0.3s ease',
+        }}
+      >
       {/* Navigation Header */}
       <nav style={{
         background: theme.surface,
@@ -929,6 +934,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </footer>
     </div>
+    </>
   );
 };
 

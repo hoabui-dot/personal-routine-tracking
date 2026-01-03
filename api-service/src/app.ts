@@ -16,6 +16,7 @@ import goalSubTasksRouter from './routes/goalSubTasks';
 import authRouter from './routes/auth';
 import cronTestRouter from './routes/cronTest';
 import cronConfigRouter from './routes/cronConfig';
+import userThemeRouter from './routes/userTheme';
 import { env } from './env';
 
 const app = express();
@@ -63,6 +64,7 @@ app.use('/daily-sessions', dailySessionsRouter);
 app.use('/goal-sub-tasks', goalSubTasksRouter);
 app.use('/cron-test', cronTestRouter);
 app.use('/cron-config', cronConfigRouter);
+app.use('/user-theme', userThemeRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

@@ -236,38 +236,6 @@ const GameCalendar: React.FC = () => {
       return;
     }
 
-    const handleComplete = async (sessionId: number, userId: number) => {
-      try {
-        await gameApi.completeSession(sessionId);
-        setTimeElapsedByUser(prev => {
-          const updated = { ...prev };
-          delete updated[userId];
-          return updated;
-        });
-        setSessionStatusByUser(prev => {
-          const updated = { ...prev };
-          // Remove all entries for this user (across all dates)
-          Object.keys(updated).forEach(key => {
-            if (key.startsWith(`${userId}-`)) {
-              delete updated[key];
-            }
-          });
-          return updated;
-        });
-        await loadData();
-        toast.success('Session completed! ✅');
-      } catch (error: any) {
-        console.error('[GameCalendar Error] Failed to complete session:', {
-          sessionId,
-          userId,
-          error: error instanceof Error ? {
-            message: error.message,
-            stack: error.stack,
-          } : error,
-        });
-      }
-    };
-
     const updateTimers = () => {
       const newTimeElapsed: Record<number, number> = {};
       

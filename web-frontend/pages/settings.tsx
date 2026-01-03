@@ -32,7 +32,8 @@ interface CronJob {
 }
 
 const Settings: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme, currentTheme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<'goals' | 'cron' | 'theme'>('goals');
   const [groupedGoals, setGroupedGoals] = useState<GroupedGoal[]>([]);
   const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
   const [editingCron, setEditingCron] = useState<{ job_name: string; hour: number; minute: number } | null>(null);
@@ -326,9 +327,72 @@ const Settings: React.FC = () => {
           <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
             <CapybaraBanner 
               title="Game Settings" 
-              subtitle="Configure daily goals and break them into smaller tasks"
+              subtitle="Configure daily goals, cron jobs, and themes"
             />
 
+            {/* Tab Navigation */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              marginBottom: '2rem',
+              borderBottom: `2px solid ${theme.border}`,
+              paddingBottom: '0'
+            }}>
+              <button
+                onClick={() => setActiveTab('goals')}
+                style={{
+                  padding: '1rem 2rem',
+                  background: activeTab === 'goals' ? theme.primary : 'transparent',
+                  color: activeTab === 'goals' ? 'white' : theme.text,
+                  border: 'none',
+                  borderBottom: activeTab === 'goals' ? `3px solid ${theme.primary}` : '3px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease',
+                  borderRadius: '0.5rem 0.5rem 0 0'
+                }}
+              >
+                🎯 Goals & Sub-Tasks
+              </button>
+              <button
+                onClick={() => setActiveTab('cron')}
+                style={{
+                  padding: '1rem 2rem',
+                  background: activeTab === 'cron' ? theme.primary : 'transparent',
+                  color: activeTab === 'cron' ? 'white' : theme.text,
+                  border: 'none',
+                  borderBottom: activeTab === 'cron' ? `3px solid ${theme.primary}` : '3px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease',
+                  borderRadius: '0.5rem 0.5rem 0 0'
+                }}
+              >
+                ⏰ Cron Jobs
+              </button>
+              <button
+                onClick={() => setActiveTab('theme')}
+                style={{
+                  padding: '1rem 2rem',
+                  background: activeTab === 'theme' ? theme.primary : 'transparent',
+                  color: activeTab === 'theme' ? 'white' : theme.text,
+                  border: 'none',
+                  borderBottom: activeTab === 'theme' ? `3px solid ${theme.primary}` : '3px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease',
+                  borderRadius: '0.5rem 0.5rem 0 0'
+                }}
+              >
+                🎨 Theme
+              </button>
+            </div>
+
+            {/* Goals Tab */}
+            {activeTab === 'goals' && (
             <div style={{
               background: theme.surface,
               borderRadius: '1.5rem',
@@ -928,10 +992,12 @@ const Settings: React.FC = () => {
                   );
                 })}
               </div>
+            </div>
+            )}
 
-              {/* Cron Jobs Section */}
+            {/* Cron Jobs Tab */}
+            {activeTab === 'cron' && (
               <div style={{
-                marginTop: '3rem',
                 background: theme.surface,
                 borderRadius: '1.5rem',
                 boxShadow: `0 10px 25px ${theme.shadow}`,
@@ -1154,37 +1220,337 @@ const Settings: React.FC = () => {
                   })}
                 </div>
               </div>
+            )}
 
-              <div style={{
-                marginTop: '2rem',
-                padding: '1rem',
-                background: `${theme.primary}15`,
-                borderRadius: '0.75rem',
-                border: `2px solid ${theme.primary}30`
+            {/* Theme Tab */}
+            {activeTab === 'theme' && (
+            <div style={{
+              background: theme.surface,
+              borderRadius: '1.5rem',
+              boxShadow: `0 10px 25px ${theme.shadow}`,
+              padding: '2.5rem',
+              border: `1px solid ${theme.border}`
+            }}>
+              <h2 style={{
+                fontSize: '1.75rem',
+                fontWeight: '700',
+                color: theme.text,
+                marginBottom: '0.5rem'
               }}>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <div style={{ color: theme.primary, fontSize: '1.25rem' }}>💡</div>
-                  <div>
-                    <h4 style={{
-                      fontSize: '0.875rem',
+                🎨 Theme Settings
+              </h2>
+              <p style={{
+                fontSize: '0.875rem',
+                color: theme.textSecondary,
+                marginBottom: '2rem'
+              }}>
+                Choose your favorite theme. Christmas theme includes animated snowflakes!
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Capybara Light Theme */}
+                <div
+                  onClick={() => setTheme('capybara-light')}
+                  style={{
+                    background: currentTheme === 'capybara-light' ? theme.highlight : theme.background,
+                    borderRadius: '16px',
+                    border: `3px solid ${currentTheme === 'capybara-light' ? theme.primary : theme.border}`,
+                    padding: '1.5rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #f4e4d7 0%, #e8d5c4 50%, #d4b5a0 100%)',
+                    border: '2px solid #d4845c',
+                    flexShrink: 0
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
                       fontWeight: '600',
                       color: theme.text,
                       marginBottom: '0.25rem'
                     }}>
-                      How Sub-Tasks Work
-                    </h4>
+                      🦫 Capybara Light
+                    </h3>
                     <p style={{
                       fontSize: '0.875rem',
                       color: theme.textSecondary,
-                      lineHeight: '1.5'
+                      margin: 0
                     }}>
-                      Break down your daily goal into smaller tasks. For example, if you have 2 hours for "English Daily Practice", 
-                      you can split it into "Speaking: 1h" and "Listening: 1h". The total of all sub-tasks must not exceed your daily goal duration.
+                      Warm, earthy tones inspired by our favorite capybara friends
                     </p>
                   </div>
+                  {currentTheme === 'capybara-light' && (
+                    <div style={{
+                      fontSize: '1.5rem',
+                      color: theme.success
+                    }}>
+                      ✓
+                    </div>
+                  )}
+                </div>
+
+                {/* Capybara Dark Theme */}
+                <div
+                  onClick={() => setTheme('capybara-dark')}
+                  style={{
+                    background: currentTheme === 'capybara-dark' ? theme.highlight : theme.background,
+                    borderRadius: '16px',
+                    border: `3px solid ${currentTheme === 'capybara-dark' ? theme.primary : theme.border}`,
+                    padding: '1.5rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #3e2723 0%, #4e342e 50%, #5d4037 100%)',
+                    border: '2px solid #ff9e6d',
+                    flexShrink: 0
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: theme.text,
+                      marginBottom: '0.25rem'
+                    }}>
+                      🌙 Capybara Dark
+                    </h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: theme.textSecondary,
+                      margin: 0
+                    }}>
+                      Cozy evening tones for comfortable night-time tracking
+                    </p>
+                  </div>
+                  {currentTheme === 'capybara-dark' && (
+                    <div style={{
+                      fontSize: '1.5rem',
+                      color: theme.success
+                    }}>
+                      ✓
+                    </div>
+                  )}
+                </div>
+
+                {/* Christmas Theme */}
+                <div
+                  onClick={() => setTheme('christmas')}
+                  style={{
+                    background: currentTheme === 'christmas' ? theme.highlight : theme.background,
+                    borderRadius: '20px',
+                    border: `3px solid ${currentTheme === 'christmas' ? theme.primary : theme.border}`,
+                    padding: '1.5rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(212, 165, 93, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #2E523C 0%, #243B55 50%, #2E523C 100%)',
+                    border: '2px solid #D4A55D',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.5rem',
+                    boxShadow: '0 4px 12px rgba(212, 165, 93, 0.3)',
+                    animation: currentTheme === 'christmas' ? 'pulse 2s ease-in-out infinite' : 'none'
+                  }}>
+                    ✨
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      color: theme.text,
+                      marginBottom: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      🎄 Christmas 2025
+                      <span style={{
+                        fontSize: '0.75rem',
+                        background: 'linear-gradient(135deg, #D4A55D, #c49547)',
+                        color: 'white',
+                        padding: '0.125rem 0.5rem',
+                        borderRadius: '12px',
+                        fontWeight: '700'
+                      }}>
+                        NEW
+                      </span>
+                    </h3>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: theme.textSecondary,
+                      margin: 0
+                    }}>
+                      Modern festive theme with snowflakes & twinkling stars ⭐
+                    </p>
+                  </div>
+                  {currentTheme === 'christmas' && (
+                    <div style={{
+                      fontSize: '1.5rem',
+                      color: '#D4A55D',
+                      animation: 'bounce 1s ease-in-out infinite'
+                    }}>
+                      ✓
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Theme Preview */}
+              {currentTheme === 'christmas' && (
+                <div style={{
+                  marginTop: '2rem',
+                  padding: '2rem',
+                  background: 'linear-gradient(135deg, rgba(46, 82, 60, 0.1) 0%, rgba(36, 59, 85, 0.1) 100%)',
+                  borderRadius: '16px',
+                  border: `2px solid ${theme.accent}`,
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    fontSize: '2rem',
+                    animation: 'twinkle 2s ease-in-out infinite'
+                  }}>
+                    ⭐
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    fontSize: '2rem',
+                    animation: 'twinkle 2s ease-in-out infinite',
+                    animationDelay: '1s'
+                  }}>
+                    ✨
+                  </div>
+                  <div style={{
+                    fontSize: '3rem',
+                    marginBottom: '1rem',
+                    animation: 'float 3s ease-in-out infinite'
+                  }}>
+                    ❄️ ☃️ 🎄 🎅 🎁
+                  </div>
+                  <p style={{
+                    fontSize: '1rem',
+                    color: theme.text,
+                    margin: 0,
+                    fontWeight: '600',
+                    background: 'linear-gradient(135deg, #D4A55D, #A12F2D)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
+                    ✨ Snowflakes & twinkling stars are now active! ⭐
+                  </p>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: theme.textSecondary,
+                    marginTop: '0.5rem'
+                  }}>
+                    Modern Christmas 2025 theme with forest green, midnight blue & metallic gold
+                  </p>
+                </div>
+              )}
+
+              {/* Add CSS animations */}
+              <style jsx>{`
+                @keyframes pulse {
+                  0%, 100% {
+                    transform: scale(1);
+                    box-shadow: 0 4px 12px rgba(212, 165, 93, 0.3);
+                  }
+                  50% {
+                    transform: scale(1.05);
+                    box-shadow: 0 6px 20px rgba(212, 165, 93, 0.5);
+                  }
+                }
+
+                @keyframes bounce {
+                  0%, 100% {
+                    transform: translateY(0);
+                  }
+                  50% {
+                    transform: translateY(-5px);
+                  }
+                }
+
+                @keyframes float {
+                  0%, 100% {
+                    transform: translateY(0);
+                  }
+                  50% {
+                    transform: translateY(-10px);
+                  }
+                }
+
+                @keyframes twinkle {
+                  0%, 100% {
+                    opacity: 0.3;
+                    transform: scale(1);
+                  }
+                  50% {
+                    opacity: 1;
+                    transform: scale(1.2);
+                  }
+                }
+              `}</style>
             </div>
+            )}
           </div>
         </div>
       </Layout>

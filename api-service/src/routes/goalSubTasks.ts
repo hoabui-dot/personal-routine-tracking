@@ -227,12 +227,16 @@ router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const result = await query(
-      'DELETE FROM goal_sub_tasks WHERE id = $1 RETURNING *',
+    console.log(`[DELETE] Attempting to delete sub-task with id: ${id}`);
+    
+    // First check if the sub-task exists
+    const checkResult = await query(
+      'SELECT * FROM goal_sub_tasks WHERE id = $1',
       [id]
     );
     
-    if (result.rows.length === 0) {
+    if (checkResult.rows.length === 0) {
+      console.log(`[DELETE] Sub-task ${id} not found`);
       res.status(404).json({
         success: false,
         error: 'Sub-task not found',
@@ -240,16 +244,44 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return;
     }
     
+    const subTask = checkResult.rows[0];
+    console.log(`[DELETE] Found sub-task:`, subTask);
+    
+    // Check if there are any sessions using this sub-task
+    const sessionsResult = await query(
+      'SELECT COUNT(*) as count FROM daily_sessions WHERE sub_task_id = $1',
+      [id]
+    );
+    
+    const sessionCount = parseInt(sessionsResult.rows[0].count);
+    console.log(`[DELETE] Found ${sessionCount} session(s) using this sub-task`);
+    
+    // Delete the sub-task (CASCADE will handle related sessions)
+    const result = await query(
+      'DELETE FROM goal_sub_tasks WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    console.log(`[DELETE] Successfully deleted sub-task ${id}`);
+    
     res.json({
       success: true,
       data: result.rows[0],
-      message: 'Sub-task deleted successfully',
+      message: sessionCount > 0 
+        ? `Sub-task deleted successfully (${sessionCount} related session(s) also removed)`
+        : 'Sub-task deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting goal sub-task:', error);
+    console.error('[DELETE] Error deleting goal sub-task:', error);
+    console.error('[DELETE] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error: error
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to delete goal sub-task',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
