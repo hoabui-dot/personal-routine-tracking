@@ -1,9 +1,9 @@
 export interface User {
   id: number;
   name: string;
+  email?: string;
   avatar_url?: string;
   created_at: string;
-  user_id: string;
 }
 
 export interface UserGoal {
@@ -14,6 +14,16 @@ export interface UserGoal {
   goal_title: string;
   daily_duration_minutes: number;
   daily_duration_hours: number;
+}
+
+export interface GoalSubTask {
+  id: number;
+  user_goal_id: number;
+  title: string;
+  duration_minutes: number;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DailySession {
@@ -30,6 +40,7 @@ export interface DailySession {
   status: 'DONE' | 'MISSED' | 'IN_PROGRESS' | 'PAUSED';
   created_at: string;
   updated_at: string;
+  sub_task_id?: number | null;
 }
 
 export interface GameSummary {

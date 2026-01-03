@@ -11,6 +11,7 @@ import notesRouter from './routes/notes';
 import usersRouter from './routes/users';
 import userGoalsRouter from './routes/userGoals';
 import dailySessionsRouter from './routes/dailySessions';
+import goalSubTasksRouter from './routes/goalSubTasks';
 import authRouter from './routes/auth';
 import { env } from './env';
 
@@ -57,6 +58,7 @@ app.use('/notes', notesRouter);
 app.use('/users', usersRouter);
 app.use('/user-goals', userGoalsRouter);
 app.use('/daily-sessions', dailySessionsRouter);
+app.use('/goal-sub-tasks', goalSubTasksRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

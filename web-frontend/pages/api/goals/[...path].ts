@@ -17,11 +17,14 @@ export default async function handler(
     : `${INTERNAL_API_URL}/goals`;
   
   try {
-    console.log('[Goals API] Request:', {
+    console.log('[Goals [...path]] Request:', {
       method: req.method,
       url,
+      path: pathArray,
+      endpoint,
       hasAuth: !!req.headers.authorization,
       params: queryParams,
+      body: req.body,
     });
 
     const config: any = {
@@ -36,20 +39,22 @@ export default async function handler(
     };
 
     // Only include body for methods that support it
-    if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+    if (req.method && !['GET', 'HEAD', 'DELETE'].includes(req.method)) {
       config.data = req.body;
     }
 
     const response = await axios(config);
 
-    console.log('[Goals API] Response:', {
+    console.log('[Goals [...path]] Response:', {
       status: response.status,
       url,
+      success: response.data?.success,
+      data: response.data,
     });
 
     res.status(response.status).json(response.data);
   } catch (error) {
-    console.error('[Goals API] Error:', {
+    console.error('[Goals [...path]] Error:', {
       url,
       error: error instanceof Error ? {
         message: error.message,
@@ -60,6 +65,7 @@ export default async function handler(
     res.status(500).json({
       success: false,
       error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }

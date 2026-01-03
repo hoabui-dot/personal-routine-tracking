@@ -103,7 +103,7 @@ router.get('/summary', async (req: Request, res: Response) => {
 // POST /daily-sessions/start - Start a session
 router.post('/start', async (req: Request, res: Response) => {
   try {
-    const { user_id, goal_id, date }: StartSessionRequest = req.body;
+    const { user_id, goal_id, date, sub_task_id }: StartSessionRequest & { sub_task_id?: number } = req.body;
     
     if (!user_id || !goal_id || !date) {
       res.status(400).json({
@@ -135,15 +135,16 @@ router.post('/start', async (req: Request, res: Response) => {
     
     // Create or update session
     const result = await query(`
-      INSERT INTO daily_sessions (user_id, goal_id, date, started_at, status)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'IN_PROGRESS')
+      INSERT INTO daily_sessions (user_id, goal_id, date, started_at, status, sub_task_id)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'IN_PROGRESS', $4)
       ON CONFLICT (user_id, goal_id, date)
       DO UPDATE SET 
         started_at = CURRENT_TIMESTAMP,
         status = 'IN_PROGRESS',
+        sub_task_id = $4,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
-    `, [user_id, goal_id, date]);
+    `, [user_id, goal_id, date, sub_task_id || null]);
     
     res.json({
       success: true,

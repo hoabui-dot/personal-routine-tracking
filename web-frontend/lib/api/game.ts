@@ -1,9 +1,48 @@
-import { User, UserGoal, DailySession, GameSummary } from '../../types/game';
+import { User, UserGoal, DailySession, GameSummary, GoalSubTask } from '../../types/game';
 import { clientEnv } from '../env';
 
 const API_URL = clientEnv.NEXT_PUBLIC_API_URL;
 
 export const gameApi = {
+  // Goals
+  getGoals: async (year?: number): Promise<any[]> => {
+    const url = year ? `${API_URL}/goals?year=${year}` : `${API_URL}/goals`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  createGoal: async (title: string, year: number): Promise<any> => {
+    const response = await fetch(`${API_URL}/goals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, year }),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  updateGoal: async (id: number, updates: { title?: string; year?: number }): Promise<any> => {
+    const response = await fetch(`${API_URL}/goals/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  deleteGoal: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_URL}/goals/${id}`, {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+  },
+
   // Users
   getUsers: async (): Promise<User[]> => {
     const response = await fetch(`${API_URL}/game/users`);
@@ -29,6 +68,51 @@ export const gameApi = {
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
+  },
+
+  // Goal Sub-Tasks
+  getGoalSubTasks: async (userGoalId?: number): Promise<GoalSubTask[]> => {
+    const url = userGoalId 
+      ? `${API_URL}/goal-sub-tasks?userGoalId=${userGoalId}`
+      : `${API_URL}/goal-sub-tasks`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  createGoalSubTask: async (userGoalId: number, title: string, durationMinutes: number): Promise<GoalSubTask> => {
+    const response = await fetch(`${API_URL}/goal-sub-tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        user_goal_id: userGoalId, 
+        title, 
+        duration_minutes: durationMinutes 
+      }),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  updateGoalSubTask: async (id: number, updates: { title?: string; duration_minutes?: number }): Promise<GoalSubTask> => {
+    const response = await fetch(`${API_URL}/goal-sub-tasks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  deleteGoalSubTask: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_URL}/goal-sub-tasks/${id}`, {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
   },
 
   // Daily Sessions
@@ -61,11 +145,11 @@ export const gameApi = {
     return data.data;
   },
 
-  startSession: async (userId: number, goalId: number, date: string): Promise<DailySession> => {
+  startSession: async (userId: number, goalId: number, date: string, subTaskId?: number): Promise<DailySession> => {
     const response = await fetch(`${API_URL}/game/daily-sessions/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, goal_id: goalId, date }),
+      body: JSON.stringify({ user_id: userId, goal_id: goalId, date, sub_task_id: subTaskId }),
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
