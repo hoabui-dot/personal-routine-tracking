@@ -33,7 +33,13 @@ const GoalForm: React.FC<GoalFormProps> = ({
       });
     } catch (error) {
       // Error is handled by parent component
-      console.error('Form submission error:', error);
+      console.error('[GoalForm Error] Form submission error:', {
+        formData,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
     }
   };
 

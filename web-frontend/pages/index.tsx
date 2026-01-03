@@ -1,279 +1,357 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Head from 'next/head';
-import { Goal, CreateGoalRequest, UpdateGoalRequest } from '@/types/Goal';
-import { goalsApi } from '@/lib/api';
-import Layout from '@/components/Layout';
-import GoalForm from '@/components/GoalForm';
-import GoalCard from '@/components/GoalCard';
-import EditGoalModal from '@/components/EditGoalModal';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useToast } from '@/contexts/ToastContext';
-import CapybaraBanner from '@/components/CapybaraBanner';
-import CapybaraFloating from '@/components/CapybaraFloating';
-import CapybaraEmptyState from '@/components/CapybaraEmptyState';
-import CapybaraLoader from '@/components/CapybaraLoader';
+import { useAuth } from '@/contexts/AuthContext';
+import CapybaraIcon from '@/components/CapybaraIcon';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function Home() {
   const { theme } = useTheme();
-  const toast = useToast();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // Load goals on component mount
-  useEffect(() => {
-    loadGoals();
-  }, []);
-
-  const loadGoals = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const fetchedGoals = await goalsApi.getAll();
-      setGoals(fetchedGoals);
-    } catch (error) {
-      setError('Failed to load goals. Please try again.');
-      console.error('Error loading goals:', error);
-    } finally {
-      setLoading(false);
+  React.useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    if (isAuthenticated) {
+      router.push('/dashboard');
     }
-  };
-
-  const handleCreateGoal = async (goalData: CreateGoalRequest) => {
-    try {
-      setCreateLoading(true);
-      const newGoal = await goalsApi.create(goalData);
-      setGoals(prev => [newGoal, ...prev]);
-      toast.success('Goal created successfully!');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create goal');
-      throw error; // Re-throw to prevent form reset
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  // const handleEditGoal = (goal: Goal) => {
-  //   setEditingGoal(goal);
-  //   setIsEditModalOpen(true);
-  // };
-
-  const handleUpdateGoal = async (id: number, goalData: UpdateGoalRequest) => {
-    try {
-      setUpdateLoading(true);
-      const updatedGoal = await goalsApi.update(id, goalData);
-      setGoals(prev => prev.map(goal => (goal.id === id ? updatedGoal : goal)));
-      toast.success('Goal updated successfully!');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update goal');
-      throw error; // Re-throw to prevent modal close
-    } finally {
-      setUpdateLoading(false);
-    }
-  };
-
-  // const handleDeleteGoal = async (id: number) => {
-  //   try {
-  //     await goalsApi.delete(id);
-  //     setGoals(prev => prev.filter(goal => goal.id !== id));
-  //     toast.success('Goal deleted successfully!');
-  //   } catch (error) {
-  //     toast.error('Failed to delete goal. Please try again.');
-  //     console.error('Error deleting goal:', error);
-  //   }
-  // };
-
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingGoal(null);
-  };
+  }, [isAuthenticated, router]);
 
   return (
-    <ProtectedRoute>
-      <Layout>
+    <>
       <Head>
-        <title>Personal Tracker - Your Goals</title>
-        <meta
-          name="description"
-          content="Manage your goals and track your progress throughout the year"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <title>Capybara Tracker - Your Daily Goal Companion</title>
+        <meta name="description" content="Track your daily goals with Capybara Tracker - A fun and engaging two-player goal tracking app" />
       </Head>
 
-      <div style={{ minHeight: '100vh', padding: '32px 16px', position: 'relative' }}>
+      <div style={{
+        minHeight: '100vh',
+        background: `linear-gradient(135deg, ${theme.primary}15 0%, ${theme.accent}15 100%)`,
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Background Pattern */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `
+            radial-gradient(circle at 20% 50%, ${theme.primary}10 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, ${theme.accent}10 0%, transparent 50%),
+            radial-gradient(circle at 40% 20%, ${theme.primary}08 0%, transparent 50%)
+          `,
+          opacity: 0.6
+        }} />
+
         {/* Floating Capybara Decorations */}
-        <CapybaraFloating position="top-left" size={100} />
-        <CapybaraFloating position="bottom-right" size={140} />
+        <div style={{
+          position: 'absolute',
+          top: '10%',
+          left: '5%',
+          opacity: 0.1,
+          animation: 'float 6s ease-in-out infinite'
+        }}>
+          <svg width="150" height="150" viewBox="0 0 120 120" fill="none">
+            <ellipse cx="60" cy="75" rx="40" ry="30" fill={theme.primary} />
+            <ellipse cx="60" cy="45" rx="28" ry="25" fill={theme.accent} />
+            <ellipse cx="45" cy="28" rx="7" ry="10" fill={theme.primary} />
+            <ellipse cx="75" cy="28" rx="7" ry="10" fill={theme.primary} />
+          </svg>
+        </div>
 
-        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Header with Capybara Banner */}
-          <CapybaraBanner 
-            title="Your Goals" 
-            subtitle="Transform your dreams into achievable goals. Track your progress and celebrate your victories!"
-          />
+        <div style={{
+          position: 'absolute',
+          bottom: '10%',
+          right: '5%',
+          opacity: 0.1,
+          animation: 'float 8s ease-in-out infinite'
+        }}>
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+            <ellipse cx="60" cy="75" rx="40" ry="30" fill={theme.accent} />
+            <ellipse cx="60" cy="45" rx="28" ry="25" fill={theme.primary} />
+          </svg>
+        </div>
 
-          {/* Error Message */}
-          {error && (
-            <div
-              style={{
-                background: `linear-gradient(135deg, ${theme.error}15, ${theme.error}10)`,
-                border: `1px solid ${theme.error}30`,
-                color: theme.error,
-                padding: '16px 24px',
-                borderRadius: '12px',
-                marginBottom: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>{error}</span>
-              <button
-                onClick={loadGoals}
-                style={{
-                  marginLeft: 'auto',
-                  color: theme.error,
-                  textDecoration: 'underline',
-                  fontWeight: '500',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Create Goal Form */}
-          <div
-            style={{
-              background: theme.surface,
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              boxShadow: `0 10px 15px -3px ${theme.shadow}`,
-              padding: '32px',
-              marginBottom: '32px',
-              border: `1px solid ${theme.border}`,
-            }}
-          >
-            <GoalForm
-              onSubmit={handleCreateGoal}
-              loading={createLoading}
-              error=""
-            />
-          </div>
-
-          {/* Goals Section Header */}
-          <div
-            style={{
+        {/* Header */}
+        <header style={{
+          position: 'relative',
+          zIndex: 10,
+          padding: 'clamp(1rem, 3vw, 2rem)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'clamp(0.5rem, 2vw, 0.75rem)'
+          }}>
+            <div style={{
+              width: 'clamp(2.5rem, 8vw, 3rem)',
+              height: 'clamp(2.5rem, 8vw, 3rem)',
+              background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+              borderRadius: '1rem',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '24px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  background: `linear-gradient(135deg, ${theme.success}, ${theme.primary})`,
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: `0 4px 6px -1px ${theme.shadow}`,
-                }}
+              justifyContent: 'center',
+              boxShadow: `0 4px 12px ${theme.shadow}`
+            }}>
+              <CapybaraIcon size={parseInt('clamp(28, 6vw, 36)')} />
+            </div>
+            <h1 style={{
+              fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+              fontWeight: '700',
+              color: theme.text,
+              margin: 0
+            }}>
+              Capybara Tracker
+            </h1>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'clamp(0.5rem, 2vw, 1rem)', alignItems: 'center' }}>
+            <ThemeToggle />
+            <Link href="/login">
+              <button style={{
+                padding: 'clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)',
+                background: 'transparent',
+                border: `2px solid ${theme.primary}`,
+                borderRadius: '0.75rem',
+                color: theme.primary,
+                fontWeight: '600',
+                fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = theme.primary;
+                e.currentTarget.style.color = 'white';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = theme.primary;
+              }}
               >
-                <svg
-                  width="20"
-                  height="20"
-                  fill="white"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                Sign In
+              </button>
+            </Link>
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <main style={{
+          position: 'relative',
+          zIndex: 1,
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: 'clamp(2rem, 8vw, 6rem) clamp(1rem, 4vw, 2rem)',
+          textAlign: 'center'
+        }}>
+          {/* Main Hero */}
+          <div style={{
+            marginBottom: 'clamp(3rem, 8vw, 5rem)'
+          }}>
+            <div style={{
+              display: 'inline-block',
+              marginBottom: 'clamp(1.5rem, 4vw, 2rem)'
+            }}>
+              <div style={{
+                width: 'clamp(120px, 25vw, 180px)',
+                height: 'clamp(120px, 25vw, 180px)',
+                background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+                borderRadius: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 20px 40px ${theme.shadow}`,
+                animation: 'bounce 3s ease-in-out infinite'
+              }}>
+                <CapybaraIcon size={parseInt('clamp(80, 18vw, 120)')} />
               </div>
-              <div>
-                <h2
-                  style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    color: theme.text,
-                    margin: 0,
-                  }}
+            </div>
+
+            <h2 style={{
+              fontSize: 'clamp(2rem, 8vw, 4rem)',
+              fontWeight: '800',
+              color: theme.text,
+              marginBottom: 'clamp(1rem, 3vw, 1.5rem)',
+              lineHeight: 1.2
+            }}>
+              Track Your Goals<br />
+              <span style={{
+                background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                With Capybara
+              </span>
+            </h2>
+
+            <p style={{
+              fontSize: 'clamp(1rem, 3vw, 1.5rem)',
+              color: theme.textSecondary,
+              marginBottom: 'clamp(2rem, 5vw, 3rem)',
+              maxWidth: '700px',
+              margin: '0 auto',
+              lineHeight: 1.6
+            }}>
+              A fun and engaging two-player daily goal tracking app. 
+              Stay motivated, track progress, and achieve your dreams together! 🎯
+            </p>
+
+            <div style={{
+              display: 'flex',
+              gap: 'clamp(0.75rem, 2vw, 1rem)',
+              justifyContent: 'center',
+              flexWrap: 'wrap'
+            }}>
+              <Link href="/login">
+                <button style={{
+                  padding: 'clamp(0.875rem, 2vw, 1.125rem) clamp(2rem, 5vw, 3rem)',
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+                  border: 'none',
+                  borderRadius: '1rem',
+                  color: 'white',
+                  fontWeight: '700',
+                  fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
+                  cursor: 'pointer',
+                  boxShadow: `0 8px 20px ${theme.shadow}`,
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = `0 12px 28px ${theme.shadow}`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = `0 8px 20px ${theme.shadow}`;
+                }}
                 >
-                  Your Goals
-                </h2>
-                <p
-                  style={{
-                    fontSize: '0.875rem',
-                    color: theme.textSecondary,
-                    margin: 0,
-                  }}
-                >
-                  {goals.length} goal{goals.length !== 1 ? 's' : ''} in total
-                </p>
-              </div>
+                  Get Started →
+                </button>
+              </Link>
             </div>
           </div>
 
-          {/* Goals Grid */}
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
-              <CapybaraLoader text="Loading your goals..." />
-            </div>
-          ) : goals.length === 0 ? (
-            <CapybaraEmptyState
-              title="No goals yet"
-              message="Create your first goal above to get started on your journey to success! 🎯"
-            />
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '24px',
+          {/* Features Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+            gap: 'clamp(1rem, 3vw, 2rem)',
+            marginTop: 'clamp(3rem, 8vw, 5rem)'
+          }}>
+            {[
+              {
+                icon: '📊',
+                title: 'Track Progress',
+                description: 'Monitor your daily sessions and see your achievements grow'
+              },
+              {
+                icon: '🎮',
+                title: 'Two-Player Mode',
+                description: 'Compete with your partner and stay motivated together'
+              },
+              {
+                icon: '📅',
+                title: 'Calendar View',
+                description: 'Visualize your progress with an intuitive calendar interface'
+              },
+              {
+                icon: '💬',
+                title: 'Real-time Chat',
+                description: 'Stay connected with instant messaging and typing indicators'
+              },
+              {
+                icon: '⏱️',
+                title: 'Session Timer',
+                description: 'Start, pause, and track your focused work sessions'
+              },
+              {
+                icon: '🎯',
+                title: 'Goal Management',
+                description: 'Set, organize, and achieve your personal goals'
+              }
+            ].map((feature, index) => (
+              <div key={index} style={{
+                background: theme.surface,
+                padding: 'clamp(1.5rem, 4vw, 2rem)',
+                borderRadius: '1.5rem',
+                border: `1px solid ${theme.border}`,
+                boxShadow: `0 4px 12px ${theme.shadow}`,
+                transition: 'all 0.3s ease',
+                cursor: 'pointer'
               }}
-            >
-              {goals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} />
-              ))}
-            </div>
-          )}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.boxShadow = `0 12px 24px ${theme.shadow}`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = `0 4px 12px ${theme.shadow}`;
+              }}
+              >
+                <div style={{
+                  fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
+                  marginBottom: 'clamp(0.75rem, 2vw, 1rem)'
+                }}>
+                  {feature.icon}
+                </div>
+                <h3 style={{
+                  fontSize: 'clamp(1.125rem, 3vw, 1.5rem)',
+                  fontWeight: '700',
+                  color: theme.text,
+                  marginBottom: 'clamp(0.5rem, 1.5vw, 0.75rem)'
+                }}>
+                  {feature.title}
+                </h3>
+                <p style={{
+                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                  color: theme.textSecondary,
+                  lineHeight: 1.6
+                }}>
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </main>
 
-          {/* Edit Goal Modal */}
-          <EditGoalModal
-            goal={editingGoal}
-            isOpen={isEditModalOpen}
-            onClose={closeEditModal}
-            onSubmit={handleUpdateGoal}
-            loading={updateLoading}
-            error=""
-          />
-        </div>
+        {/* Footer */}
+        <footer style={{
+          position: 'relative',
+          zIndex: 1,
+          textAlign: 'center',
+          padding: 'clamp(2rem, 5vw, 3rem)',
+          color: theme.textSecondary,
+          fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+        }}>
+          <p>© 2025 Capybara Tracker. Built with ❤️ and 🦫</p>
+        </footer>
+
+        <style jsx>{`
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0px) rotate(0deg);
+            }
+            50% {
+              transform: translateY(-20px) rotate(5deg);
+            }
+          }
+
+          @keyframes bounce {
+            0%, 100% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-10px);
+            }
+          }
+        `}</style>
       </div>
-    </Layout>
-    </ProtectedRoute>
+    </>
   );
 }

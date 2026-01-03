@@ -54,8 +54,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/login`;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/auth/login`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,10 +77,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(data.data.token);
       setUser(data.data.user);
 
-      // Redirect to calendar
-      router.push('/calendar');
+      // Redirect to dashboard
+      router.push('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[Auth Error] Login failed:', {
+        endpoint,
+        method: 'POST',
+        email,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       throw error;
     }
   };
@@ -97,8 +106,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('Refreshing user data...');
 
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/me`;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/auth/me`, {
+      const response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -114,7 +124,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         sessionStorage.setItem('user', JSON.stringify(data.data));
       }
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      console.error('[Auth Error] Failed to refresh user:', {
+        endpoint,
+        method: 'GET',
+        hasToken: !!token,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
     }
   };
 
@@ -126,8 +144,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('Uploading avatar:', { fileName: file.name, fileSize: file.size, fileType: file.type });
 
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/upload-avatar`;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/auth/upload-avatar`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -150,7 +169,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('User data refreshed after avatar upload');
     } catch (error) {
-      console.error('Upload avatar error:', error);
+      console.error('[Auth Error] Failed to upload avatar:', {
+        endpoint,
+        method: 'POST',
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        hasToken: !!token,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       throw error;
     }
   };
@@ -158,8 +188,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const deleteAvatar = async () => {
     if (!token) throw new Error('Not authenticated');
 
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/delete-avatar`;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/auth/delete-avatar`, {
+      const response = await fetch(endpoint, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -175,7 +206,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Refresh user data
       await refreshUser();
     } catch (error) {
-      console.error('Delete avatar error:', error);
+      console.error('[Auth Error] Failed to delete avatar:', {
+        endpoint,
+        method: 'DELETE',
+        hasToken: !!token,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       throw error;
     }
   };

@@ -56,6 +56,15 @@ const ProfilePage: React.FC = () => {
       await uploadAvatar(file);
       toast.success('Avatar uploaded successfully!');
     } catch (error) {
+      console.error('[Profile Error] Failed to upload avatar:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error instanceof Error ? error.message : 'Failed to upload avatar');
     } finally {
       setUploading(false);
@@ -75,6 +84,12 @@ const ProfilePage: React.FC = () => {
       await deleteAvatar();
       toast.success('Avatar deleted successfully!');
     } catch (error) {
+      console.error('[Profile Error] Failed to delete avatar:', {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error instanceof Error ? error.message : 'Failed to delete avatar');
     } finally {
       setDeleting(false);

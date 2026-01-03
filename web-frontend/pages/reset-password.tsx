@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import CapybaraIcon from '../components/CapybaraIcon';
 import CapybaraFloating from '../components/CapybaraFloating';
@@ -8,6 +9,7 @@ import api from '../lib/api';
 
 const ResetPasswordPage: React.FC = () => {
   const { theme } = useTheme();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const { token } = router.query;
   
@@ -16,6 +18,13 @@ const ResetPasswordPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (!token && router.isReady) {
@@ -54,11 +63,41 @@ const ResetPasswordPage: React.FC = () => {
         setError(response.data.error || 'Failed to reset password');
       }
     } catch (err: any) {
+      console.error('[Reset Password Error] Failed to reset password:', {
+        endpoint: '/auth/reset-password',
+        method: 'POST',
+        hasToken: !!token,
+        error: {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+        },
+      });
       setError(err.response?.data?.error || 'Failed to reset password');
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: theme.background
+      }}>
+        <div style={{ color: theme.text }}>Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render form if already authenticated (will redirect)
+  if (isAuthenticated) {
+    return null;
+  }
 
   if (success) {
     return (

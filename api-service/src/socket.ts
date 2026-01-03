@@ -2,8 +2,9 @@ import { Server as HTTPServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import chatService from './services/chatService';
+import { env } from './env';
 
-const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key-change-this';
+const JWT_SECRET = env.JWT_SECRET;
 
 interface AuthenticatedSocket extends Socket {
   userId?: number;
@@ -17,7 +18,7 @@ export const initializeSocket = (httpServer: HTTPServer) => {
   const io = new Server(httpServer, {
     cors: {
       origin: [
-        process.env['FRONTEND_URL'] || 'http://localhost:3000',
+        env.FRONTEND_URL,
         'http://localhost:3001'
       ],
       credentials: true,
@@ -58,11 +59,18 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       (socket as any).userAvatar = null;
     }
 
-    // Send recent messages to newly connected user
+    // Send recent messages and unread count to newly connected user
     try {
-      const recentMessages = await chatService.getRecentMessages(50);
+      const recentMessages = await chatService.getRecentMessages(socket.userId!, 50);
+      const unreadCount = await chatService.getUnreadCount(socket.userId!);
+      
       console.log(`📨 Sending ${recentMessages.length} messages to user ${socket.userId}`);
-      socket.emit('chat:history', recentMessages);
+      console.log(`📬 User ${socket.userId} has ${unreadCount} unread messages`);
+      
+      socket.emit('chat:history', {
+        messages: recentMessages,
+        unreadCount: unreadCount
+      });
     } catch (error) {
       console.error('Error fetching chat history:', error);
     }
@@ -135,6 +143,21 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       
       console.log(`📤 Broadcasting typing event:`, typingData);
       socket.broadcast.emit('chat:typing', typingData);
+    });
+
+    // Handle mark messages as read
+    socket.on('chat:markAsRead', async (messageIds: number[]) => {
+      if (!socket.userId || !messageIds || messageIds.length === 0) return;
+
+      try {
+        await chatService.markMessagesAsRead(socket.userId, messageIds);
+        const newUnreadCount = await chatService.getUnreadCount(socket.userId);
+        
+        socket.emit('chat:unreadCount', newUnreadCount);
+        console.log(`✅ User ${socket.userId} marked ${messageIds.length} messages as read. New unread count: ${newUnreadCount}`);
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
     });
 
     // Handle disconnect

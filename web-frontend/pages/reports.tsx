@@ -152,7 +152,13 @@ export default function Reports() {
         });
 
       } catch (err) {
-        console.error('Error loading report data:', err);
+        console.error('[Reports Error] Failed to load report data:', {
+          selectedYear,
+          error: err instanceof Error ? {
+            message: err.message,
+            stack: err.stack,
+          } : err,
+        });
         setError('Failed to load report data');
       } finally {
         setLoading(false);

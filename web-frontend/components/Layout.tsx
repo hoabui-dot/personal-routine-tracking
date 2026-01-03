@@ -107,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               className="sm:flex"
               >
                 <Link
-                  href="/"
+                  href="/dashboard"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -116,11 +116,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
                     fontWeight: '500',
-                    color: isActive('/') ? theme.primary : theme.textSecondary,
-                    background: isActive('/') ? theme.highlight : 'transparent',
+                    color: isActive('/dashboard') ? theme.primary : theme.textSecondary,
+                    background: isActive('/dashboard') ? theme.highlight : 'transparent',
                     textDecoration: 'none',
                     transition: 'all 0.2s ease',
-                    border: isActive('/') ? `2px solid ${theme.primary}` : '2px solid transparent'
+                    border: isActive('/dashboard') ? `2px solid ${theme.primary}` : '2px solid transparent'
+                  }}
+                >
+                  <svg
+                    style={{ width: '1.125rem', height: '1.125rem' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    />
+                  </svg>
+                  Dashboard
+                </Link>
+
+                <Link
+                  href="/goals"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: isActive('/goals') ? theme.primary : theme.textSecondary,
+                    background: isActive('/goals') ? theme.highlight : 'transparent',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s ease',
+                    border: isActive('/goals') ? `2px solid ${theme.primary}` : '2px solid transparent'
                   }}
                 >
                   <svg
@@ -261,19 +294,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     border: isActive('/profile') ? `2px solid ${theme.primary}` : '2px solid transparent'
                   }}
                 >
-                  <svg
-                    style={{ width: '1.125rem', height: '1.125rem' }}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
+                  {/* User Avatar */}
+                  {user && (
+                    <div style={{
+                      width: '1.125rem',
+                      height: '1.125rem',
+                      borderRadius: '50%',
+                      background: !user.avatar_url ? `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` : 'transparent',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.625rem',
+                      fontWeight: '600',
+                      overflow: 'hidden',
+                      border: `1px solid ${isActive('/profile') ? theme.primary : theme.border}`
+                    }}>
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        getUserInitials(user.name)
+                      )}
+                    </div>
+                  )}
                   Profile
                 </Link>
               </div>
@@ -553,8 +607,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }}
         >
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Dashboard Link */}
             <Link
-              href="/"
+              href="/dashboard"
               onClick={() => {
                 const mobileMenu = document.getElementById('mobile-menu');
                 const button = document.querySelector('.mobile-menu-button');
@@ -569,12 +624,70 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 gap: '0.75rem',
                 padding: '0.875rem 1rem',
                 borderRadius: '0.75rem',
-                background: isActive('/') ? theme.highlight : 'transparent',
-                border: isActive('/') ? `2px solid ${theme.primary}` : `2px solid transparent`,
+                background: isActive('/dashboard') ? theme.highlight : 'transparent',
+                border: isActive('/dashboard') ? `2px solid ${theme.primary}` : `2px solid transparent`,
                 color: theme.text,
                 textDecoration: 'none',
                 transition: 'all 0.2s ease',
-                boxShadow: isActive('/') ? `0 2px 8px ${theme.shadow}` : 'none'
+                boxShadow: isActive('/dashboard') ? `0 2px 8px ${theme.shadow}` : 'none'
+              }}
+            >
+              <div style={{
+                width: '2rem',
+                height: '2rem',
+                background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+                borderRadius: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: `0 2px 4px ${theme.shadow}`
+              }}>
+                <svg
+                  style={{ width: '1rem', height: '1rem', color: 'white' }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
+                </svg>
+              </div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+                <span style={{ fontSize: '0.9375rem', fontWeight: '600', lineHeight: 1.2 }}>Dashboard</span>
+                <span style={{ fontSize: '0.8125rem', color: theme.textSecondary, fontWeight: '400', lineHeight: 1.2 }}>
+                  Your overview
+                </span>
+              </div>
+            </Link>
+
+            {/* Goals Link */}
+            <Link
+              href="/goals"
+              onClick={() => {
+                const mobileMenu = document.getElementById('mobile-menu');
+                const button = document.querySelector('.mobile-menu-button');
+                if (mobileMenu && button) {
+                  mobileMenu.classList.add('hidden');
+                  button.classList.remove('menu-open');
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.875rem 1rem',
+                borderRadius: '0.75rem',
+                background: isActive('/goals') ? theme.highlight : 'transparent',
+                border: isActive('/goals') ? `2px solid ${theme.primary}` : `2px solid transparent`,
+                color: theme.text,
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+                boxShadow: isActive('/goals') ? `0 2px 8px ${theme.shadow}` : 'none'
               }}
             >
               <div style={{

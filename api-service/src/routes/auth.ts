@@ -6,6 +6,7 @@ import multer from 'multer';
 import { query } from '../db';
 import emailService from '../services/emailService';
 import { uploadAvatar, deleteAvatar, extractKeyFromUrl } from '../services/s3Service';
+import { env } from '../env';
 
 const router = Router();
 const upload = multer({ 
@@ -23,7 +24,7 @@ const upload = multer({
   },
 });
 
-const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key-change-this';
+const JWT_SECRET = env.JWT_SECRET;
 const JWT_EXPIRES_IN = '7d';
 
 // Register

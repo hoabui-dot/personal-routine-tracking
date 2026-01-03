@@ -11,6 +11,7 @@ interface ChatMessage {
   message: string;
   created_at: string;
   is_deleted: boolean;
+  is_read?: boolean;
 }
 
 interface TypingUser {
@@ -26,13 +27,26 @@ const ChatBox: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Default to minimized
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNewMessageAlert, setShowNewMessageAlert] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const newMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load minimized state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('chatMinimized');
+    if (savedState !== null) {
+      setIsMinimized(savedState === 'true');
+    }
+  }, []);
+
+  // Save minimized state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('chatMinimized', String(isMinimized));
+  }, [isMinimized]);
 
   // Debug: Log typing users changes
   useEffect(() => {
@@ -55,100 +69,159 @@ const ChatBox: React.FC = () => {
     }
   }, []);
 
-  // Clear unread count when chat is opened
+  // Clear unread count when chat is opened and mark messages as read
   useEffect(() => {
-    if (!isMinimized) {
+    if (!isMinimized && socket && messages.length > 0) {
+      // Mark all unread messages as read
+      const unreadMessageIds = messages
+        .filter(msg => msg.user_id !== user?.id && !msg.is_read)
+        .map(msg => msg.id);
+      
+      if (unreadMessageIds.length > 0) {
+        console.log(`📖 Marking ${unreadMessageIds.length} messages as read`);
+        socket.emit('chat:markAsRead', unreadMessageIds);
+        
+        // Update local state
+        setMessages(prev => prev.map(msg => 
+          unreadMessageIds.includes(msg.id) ? { ...msg, is_read: true } : msg
+        ));
+      }
+      
       setUnreadCount(0);
     }
-  }, [isMinimized]);
+  }, [isMinimized, socket, messages, user?.id]);
 
   // Initialize socket connection
   useEffect(() => {
     if (!token) return;
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const newSocket = io(API_URL, {
-      auth: { token }
-    });
+    let newSocket: Socket | null = null;
 
-    newSocket.on('connect', () => {
-      console.log('✅ Connected to chat');
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from chat');
-      setIsConnected(false);
-    });
-
-    newSocket.on('chat:history', (history: ChatMessage[]) => {
-      setMessages(history);
-    });
-
-    newSocket.on('chat:message', (message: ChatMessage) => {
-      setMessages(prev => [...prev, message]);
-      
-      // If message is from another user
-      if (message.user_id !== user?.id) {
-        if (isMinimized) {
-          // Increment unread count when minimized
-          setUnreadCount(prev => prev + 1);
-        } else {
-          // Show brief alert when chat is open
-          setShowNewMessageAlert(true);
-          if (newMessageTimeoutRef.current) {
-            clearTimeout(newMessageTimeoutRef.current);
-          }
-          newMessageTimeoutRef.current = setTimeout(() => {
-            setShowNewMessageAlert(false);
-          }, 3000);
-        }
+    // Fetch socket URL from API (server-side config)
+    const initSocket = async () => {
+      try {
+        const response = await fetch('/api/socket-config');
+        const data = await response.json();
         
-        // Show browser notification if supported
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New message from ' + message.user_name, {
-            body: message.message,
-            icon: message.avatar_url || '/favicon.ico',
-            tag: 'chat-message'
-          });
+        if (!data.success) {
+          console.error('❌ Failed to get socket URL:', data);
+          return;
         }
-      }
-    });
 
-    newSocket.on('chat:typing', (data: { userId: number; userName: string; isTyping: boolean }) => {
-      console.log('📝 Typing event received:', data);
-      
-      if (data.userId === user?.id) {
-        console.log('⚠️ Ignoring own typing event');
-        return; // Don't show own typing
-      }
-      
-      console.log('✅ Processing typing event from:', data.userName);
-      
-      setTypingUsers(prev => {
-        if (data.isTyping) {
-          // Add user if not already in list
-          if (!prev.find(u => u.userId === data.userId)) {
-            console.log('➕ Adding user to typing list:', data.userName);
-            return [...prev, { userId: data.userId, userName: data.userName }];
+        // Use same origin if socketUrl is empty, otherwise use provided URL
+        const SOCKET_URL = data.socketUrl || window.location.origin;
+        console.log('🔌 Connecting to Socket.IO at:', SOCKET_URL);
+        
+        newSocket = io(SOCKET_URL, {
+          auth: { token },
+          path: '/socket.io',
+          transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+        });
+
+        newSocket.on('connect', () => {
+          console.log('✅ Connected to chat');
+          setIsConnected(true);
+        });
+
+        newSocket.on('disconnect', () => {
+          console.log('❌ Disconnected from chat');
+          setIsConnected(false);
+        });
+
+        newSocket.on('chat:history', (data: { messages: ChatMessage[]; unreadCount: number } | ChatMessage[]) => {
+          // Handle both old and new format
+          if (Array.isArray(data)) {
+            // Old format - just array of messages
+            setMessages(data);
+          } else {
+            // New format - object with messages and unreadCount
+            setMessages(data.messages);
+            setUnreadCount(data.unreadCount);
+            console.log(`📬 Loaded ${data.messages.length} messages, ${data.unreadCount} unread`);
           }
-          return prev;
-        } else {
-          // Remove user from typing list
-          console.log('➖ Removing user from typing list:', data.userName);
-          return prev.filter(u => u.userId !== data.userId);
-        }
-      });
-    });
+        });
 
-    newSocket.on('chat:error', (error: { message: string }) => {
-      console.error('Chat error:', error.message);
-    });
+        newSocket.on('chat:unreadCount', (count: number) => {
+          console.log(`📬 Unread count updated: ${count}`);
+          setUnreadCount(count);
+        });
 
-    setSocket(newSocket);
+        newSocket.on('chat:message', (message: ChatMessage) => {
+          setMessages(prev => [...prev, message]);
+          
+          // If message is from another user
+          if (message.user_id !== user?.id) {
+            if (isMinimized) {
+              // Increment unread count when minimized
+              setUnreadCount(prev => prev + 1);
+            } else {
+              // Mark as read immediately if chat is open
+              newSocket?.emit('chat:markAsRead', [message.id]);
+              message.is_read = true;
+              
+              // Show brief alert when chat is open
+              setShowNewMessageAlert(true);
+              if (newMessageTimeoutRef.current) {
+                clearTimeout(newMessageTimeoutRef.current);
+              }
+              newMessageTimeoutRef.current = setTimeout(() => {
+                setShowNewMessageAlert(false);
+              }, 3000);
+            }
+            
+            // Show browser notification if supported
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('New message from ' + message.user_name, {
+                body: message.message,
+                icon: message.avatar_url || '/favicon.ico',
+                tag: 'chat-message'
+              });
+            }
+          }
+        });
+
+        newSocket.on('chat:typing', (data: { userId: number; userName: string; isTyping: boolean }) => {
+          console.log('📝 Typing event received:', data);
+          
+          if (data.userId === user?.id) {
+            console.log('⚠️ Ignoring own typing event');
+            return; // Don't show own typing
+          }
+          
+          console.log('✅ Processing typing event from:', data.userName);
+          
+          setTypingUsers(prev => {
+            if (data.isTyping) {
+              // Add user if not already in list
+              if (!prev.find(u => u.userId === data.userId)) {
+                console.log('➕ Adding user to typing list:', data.userName);
+                return [...prev, { userId: data.userId, userName: data.userName }];
+              }
+              return prev;
+            } else {
+              // Remove user from typing list
+              console.log('➖ Removing user from typing list:', data.userName);
+              return prev.filter(u => u.userId !== data.userId);
+            }
+          });
+        });
+
+        newSocket.on('chat:error', (error: { message: string }) => {
+          console.error('Chat error:', error.message);
+        });
+
+        setSocket(newSocket);
+      } catch (error) {
+        console.error('❌ Failed to initialize socket:', error);
+      }
+    };
+
+    initSocket();
 
     return () => {
-      newSocket.close();
+      if (newSocket) {
+        newSocket.close();
+      }
       if (newMessageTimeoutRef.current) {
         clearTimeout(newMessageTimeoutRef.current);
       }

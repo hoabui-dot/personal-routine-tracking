@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import CapybaraIcon from '../components/CapybaraIcon';
 import CapybaraFloating from '../components/CapybaraFloating';
 
 const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const { theme } = useTheme();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +30,37 @@ const LoginPage: React.FC = () => {
     try {
       await login(email, password);
     } catch (err: any) {
+      console.error('[Login Error] Failed to login:', {
+        email,
+        error: err instanceof Error ? {
+          message: err.message,
+          stack: err.stack,
+        } : err,
+      });
       setError(err.message || 'Failed to login');
       setLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: theme.background
+      }}>
+        <div style={{ color: theme.text }}>Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render login form if already authenticated (will redirect)
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div style={{ 

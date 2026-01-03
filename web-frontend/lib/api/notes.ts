@@ -1,6 +1,7 @@
 import { Note, CreateNoteRequest, UpdateNoteRequest } from '../../types/note';
+import { clientEnv } from '../env';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = clientEnv.NEXT_PUBLIC_API_URL;
 
 export const notesApi = {
   // Get all notes or filter by date range

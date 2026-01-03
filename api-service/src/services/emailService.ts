@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { env } from '../env';
 
 interface EmailConfig {
   host: string;
@@ -15,23 +16,18 @@ class EmailService {
 
   constructor() {
     this.config = {
-      host: process.env['EMAIL_HOST'] || 'smtp.gmail.com',
-      port: parseInt(process.env['EMAIL_PORT'] || '587'),
-      secure: process.env['EMAIL_SECURE'] === 'true',
-      user: process.env['EMAIL_USER'] || '',
-      password: process.env['EMAIL_PASSWORD'] || '',
-      from: process.env['EMAIL_FROM'] || 'noreply@personaltracker.com',
+      host: env.EMAIL_HOST,
+      port: env.EMAIL_PORT,
+      secure: env.EMAIL_SECURE,
+      user: env.EMAIL_USER,
+      password: env.EMAIL_PASSWORD,
+      from: env.EMAIL_FROM,
     };
 
     this.initializeTransporter();
   }
 
   private initializeTransporter(): void {
-    if (!this.config.user || !this.config.password) {
-      console.warn('⚠️  Email configuration not found. Email features will be disabled.');
-      return;
-    }
-
     this.transporter = nodemailer.createTransport({
       host: this.config.host,
       port: this.config.port,
@@ -77,7 +73,7 @@ class EmailService {
   }
 
   public async sendVerificationEmail(email: string, name: string, token: string): Promise<boolean> {
-    const verificationUrl = `${process.env['FRONTEND_URL']}/verify-email?token=${token}`;
+    const verificationUrl = `${env.PUBLIC_FRONTEND_URL}/verify-email?token=${token}`;
     const subject = 'Verify Your Email Address - Personal Tracker';
     
     const html = `
@@ -125,7 +121,7 @@ class EmailService {
   }
 
   public async sendPasswordResetEmail(email: string, name: string, token: string): Promise<boolean> {
-    const resetUrl = `${process.env['FRONTEND_URL']}/reset-password?token=${token}`;
+    const resetUrl = `${env.PUBLIC_FRONTEND_URL}/reset-password?token=${token}`;
     const subject = '🔐 Reset Your Password - Capybara Tracker';
     
     const html = `
@@ -420,7 +416,7 @@ class EmailService {
         <p>Start, pause, and resume your sessions with countdown timers.</p>
       </div>
       <div style="text-align: center;">
-        <a href="${process.env['FRONTEND_URL']}" class="button">Start Tracking Now</a>
+        <a href="${env.PUBLIC_FRONTEND_URL}" class="button">Start Tracking Now</a>
       </div>
       <p>If you have any questions, don't hesitate to reach out.</p>
       <p>Happy tracking!<br>The Personal Tracker Team</p>

@@ -67,7 +67,14 @@ const GameCalendar: React.FC = () => {
       });
       setSessions(sessionsData);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('[GameCalendar Error] Failed to load data:', {
+        year,
+        month,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error('Failed to load game data');
     }
   }, [year, month, toast]);
@@ -115,7 +122,12 @@ const GameCalendar: React.FC = () => {
       setTimeRemainingByUser(newTimeRemaining);
       setInitialized(true);
     } catch (error) {
-      console.error('Failed to initialize:', error);
+      console.error('[GameCalendar Error] Failed to initialize:', {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       setInitialized(true);
     }
   }, [initialized, toast]);
@@ -154,7 +166,14 @@ const GameCalendar: React.FC = () => {
         await loadData();
         toast.success('Session completed! ✅');
       } catch (error: any) {
-        console.error('Failed to complete session:', error);
+        console.error('[GameCalendar Error] Failed to complete session:', {
+          sessionId,
+          userId,
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+          } : error,
+        });
       }
     };
 
@@ -255,7 +274,14 @@ const GameCalendar: React.FC = () => {
       await loadData();
       toast.success('Session started!');
     } catch (error: any) {
-      console.error('Failed to start session:', error);
+      console.error('[GameCalendar Error] Failed to start session:', {
+        userId,
+        selectedDate,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error.message || 'Failed to start session');
     } finally {
       setLoading(false);
@@ -290,6 +316,14 @@ const GameCalendar: React.FC = () => {
       await loadData();
       toast.success('Session stopped');
     } catch (error: any) {
+      console.error('[GameCalendar Error] Failed to stop session:', {
+        sessionId,
+        userId,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error.message || 'Failed to stop session');
     } finally {
       setLoading(false);
@@ -309,6 +343,14 @@ const GameCalendar: React.FC = () => {
       await loadData();
       toast.success('Session paused');
     } catch (error: any) {
+      console.error('[GameCalendar Error] Failed to pause session:', {
+        sessionId,
+        userId,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error.message || 'Failed to pause session');
     } finally {
       setLoading(false);
@@ -328,6 +370,14 @@ const GameCalendar: React.FC = () => {
       await loadData();
       toast.success('Session resumed');
     } catch (error: any) {
+      console.error('[GameCalendar Error] Failed to resume session:', {
+        sessionId,
+        userId,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error(error.message || 'Failed to resume session');
     } finally {
       setLoading(false);

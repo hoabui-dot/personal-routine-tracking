@@ -2,7 +2,6 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import { testConnection } from './db';
 import { initializeSocket } from './socket';
 import goalsRouter from './routes/goals';
@@ -13,13 +12,11 @@ import usersRouter from './routes/users';
 import userGoalsRouter from './routes/userGoals';
 import dailySessionsRouter from './routes/dailySessions';
 import authRouter from './routes/auth';
-
-// Load environment variables
-dotenv.config();
+import { env } from './env';
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env['PORT'] || 4000;
+const PORT = env.PORT;
 
 // Initialize Socket.IO
 initializeSocket(httpServer);
@@ -28,7 +25,7 @@ initializeSocket(httpServer);
 app.use(helmet()); // Security headers
 app.use(cors({
   origin: [
-    process.env['FRONTEND_URL'] || 'http://localhost:3000',
+    env.FRONTEND_URL,
     'http://localhost:3001'
   ],
   credentials: true,
@@ -76,7 +73,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({
     success: false,
     error: 'Internal server error',
-    ...(process.env['NODE_ENV'] === 'development' && { details: err.message }),
+    ...(env.NODE_ENV === 'development' && { details: err.message }),
   });
 });
 
@@ -95,7 +92,7 @@ const startServer = async () => {
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🎯 Goals API: http://localhost:${PORT}/goals`);
       console.log(`💬 WebSocket chat enabled`);
-      console.log(`🌍 Environment: ${process.env['NODE_ENV'] || 'development'}`);
+      console.log(`🌍 Environment: ${env.NODE_ENV}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

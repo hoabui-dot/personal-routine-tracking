@@ -22,7 +22,12 @@ const Settings: React.FC = () => {
       const data = await gameApi.getUserGoals();
       setUserGoals(data);
     } catch (error) {
-      console.error('Failed to load user goals:', error);
+      console.error('[Settings Error] Failed to load user goals:', {
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error('Failed to load settings');
     } finally {
       setLoading(false);
@@ -41,7 +46,16 @@ const Settings: React.FC = () => {
       await loadUserGoals();
       toast.success('Settings updated successfully');
     } catch (error) {
-      console.error('Failed to update settings:', error);
+      console.error('[Settings Error] Failed to update user goal:', {
+        userId,
+        goalId,
+        hours,
+        minutes: hours * 60,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error('Failed to update settings');
     } finally {
       setSaving(null);

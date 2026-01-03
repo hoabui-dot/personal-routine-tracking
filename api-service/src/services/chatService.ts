@@ -9,20 +9,61 @@ export interface ChatMessage {
   is_deleted: boolean;
   user_name?: string;
   avatar_url?: string;
+  is_read?: boolean;
 }
 
 class ChatService {
-  // Get recent messages (last 50)
-  async getRecentMessages(limit: number = 50): Promise<ChatMessage[]> {
+  // Get unread count for a user
+  async getUnreadCount(userId: number): Promise<number> {
     try {
       const result = await query(
-        `SELECT cm.*, u.name as user_name, u.avatar_url
+        'SELECT get_unread_message_count($1) as count',
+        [userId]
+      );
+      return result.rows[0]?.count || 0;
+    } catch (error) {
+      console.error('❌ Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  // Mark messages as read
+  async markMessagesAsRead(userId: number, messageIds: number[]): Promise<number> {
+    try {
+      if (messageIds.length === 0) return 0;
+      
+      const result = await query(
+        'SELECT mark_messages_as_read($1, $2) as count',
+        [userId, messageIds]
+      );
+      
+      const count = result.rows[0]?.count || 0;
+      console.log(`✅ Marked ${count} messages as read for user ${userId}`);
+      return count;
+    } catch (error) {
+      console.error('❌ Error marking messages as read:', error);
+      return 0;
+    }
+  }
+
+  // Get recent messages (last 50) with read status
+  async getRecentMessages(userId: number, limit: number = 50): Promise<ChatMessage[]> {
+    try {
+      const result = await query(
+        `SELECT 
+          cm.*,
+          u.name as user_name,
+          u.avatar_url,
+          EXISTS(
+            SELECT 1 FROM message_read_receipts mrr 
+            WHERE mrr.message_id = cm.id AND mrr.user_id = $1
+          ) as is_read
          FROM chat_messages cm
          JOIN users u ON cm.user_id = u.id
          WHERE cm.is_deleted = FALSE
          ORDER BY cm.created_at DESC
-         LIMIT $1`,
-        [limit]
+         LIMIT $2`,
+        [userId, limit]
       );
       console.log(`📚 Retrieved ${result.rows.length} messages from database`);
       return result.rows.reverse(); // Return in chronological order

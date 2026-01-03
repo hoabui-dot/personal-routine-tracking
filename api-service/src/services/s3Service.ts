@@ -1,16 +1,17 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import { env } from '../env';
 
 const s3Client = new S3Client({
-  region: process.env['AWS_REGION'] || 'ap-southeast-2',
+  region: env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env['AWS_ACCESS_KEY_ID'] || '',
-    secretAccessKey: process.env['AWS_SECRET_ACCESS_KEY'] || '',
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
-const BUCKET_NAME = process.env['AWS_S3_BUCKET_NAME'] || 'nouraagents';
-const AWS_REGION = process.env['AWS_REGION'] || 'ap-southeast-2';
+const BUCKET_NAME = env.AWS_S3_BUCKET_NAME;
+const AWS_REGION = env.AWS_REGION;
 
 export interface UploadResult {
   url: string;

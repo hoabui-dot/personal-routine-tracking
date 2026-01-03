@@ -305,7 +305,14 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
       });
       setNotes(notesMap);
     } catch (error) {
-      console.error('Failed to load notes:', error);
+      console.error('[Calendar Error] Failed to load notes:', {
+        year,
+        month,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
     }
   }, [year, month]);
 
@@ -396,8 +403,16 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
       
       setIsEditing(false);
     } catch (error) {
+      console.error('[Calendar Error] Failed to save note:', {
+        selectedDate,
+        hasExistingNote: !!notes[selectedDate],
+        contentLength: noteContent.length,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error('Failed to save note');
-      console.error('Error saving note:', error);
     } finally {
       setLoading(false);
     }
@@ -418,8 +433,15 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
       setIsEditing(false);
       toast.success('Note deleted successfully');
     } catch (error) {
+      console.error('[Calendar Error] Failed to delete note:', {
+        selectedDate,
+        noteId: notes[selectedDate]?.id,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       toast.error('Failed to delete note');
-      console.error('Error deleting note:', error);
     } finally {
       setLoading(false);
     }

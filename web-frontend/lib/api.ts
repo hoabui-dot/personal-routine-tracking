@@ -12,10 +12,12 @@ import {
   UpdateSubGoalRequest,
 } from '@/types/SubGoal';
 import { Session, CreateSessionRequest, SessionStats } from '@/types/Session';
+import { clientEnv } from './env';
 
 // Create axios instance with base configuration
+// Use /api for client-side calls (goes through Next.js API routes)
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+  baseURL: clientEnv.NEXT_PUBLIC_API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -50,12 +52,23 @@ api.interceptors.response.use(
 export const goalsApi = {
   // Get all goals
   getAll: async (year?: number): Promise<Goal[]> => {
+    const params = year ? { year } : {};
     try {
-      const params = year ? { year } : {};
       const response = await api.get<GoalsListResponse>('/goals', { params });
       return response.data.data || [];
     } catch (error) {
-      console.error('Error fetching goals:', error);
+      console.error('[API Error] Failed to fetch goals:', {
+        endpoint: '/goals',
+        method: 'GET',
+        params: params,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch goals');
     }
   },
@@ -69,7 +82,18 @@ export const goalsApi = {
       }
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching goal:', error);
+      console.error('[API Error] Failed to fetch goal:', {
+        endpoint: `/goals/${id}`,
+        method: 'GET',
+        goalId: id,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch goal');
     }
   },
@@ -83,7 +107,18 @@ export const goalsApi = {
       }
       return response.data.data;
     } catch (error) {
-      console.error('Error creating goal:', error);
+      console.error('[API Error] Failed to create goal:', {
+        endpoint: '/goals',
+        method: 'POST',
+        requestData: goalData,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       if (axios.isAxiosError(error) && error.response?.data?.details) {
         throw new Error(error.response.data.details.join(', '));
       }
@@ -103,7 +138,19 @@ export const goalsApi = {
       }
       return response.data.data;
     } catch (error) {
-      console.error('Error updating goal:', error);
+      console.error('[API Error] Failed to update goal:', {
+        endpoint: `/goals/${id}`,
+        method: 'PUT',
+        goalId: id,
+        requestData: goalData,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       if (axios.isAxiosError(error) && error.response?.data?.details) {
         throw new Error(error.response.data.details.join(', '));
       }
@@ -116,7 +163,18 @@ export const goalsApi = {
     try {
       await api.delete(`/goals/${id}`);
     } catch (error) {
-      console.error('Error deleting goal:', error);
+      console.error('[API Error] Failed to delete goal:', {
+        endpoint: `/goals/${id}`,
+        method: 'DELETE',
+        goalId: id,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to delete goal');
     }
   },
@@ -130,7 +188,18 @@ export const subGoalsApi = {
       const response = await api.get(`/sub-goals/goal/${goalId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching sub-goals:', error);
+      console.error('[API Error] Failed to fetch sub-goals:', {
+        endpoint: `/sub-goals/goal/${goalId}`,
+        method: 'GET',
+        goalId,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch sub-goals');
     }
   },
@@ -141,7 +210,18 @@ export const subGoalsApi = {
       const response = await api.get(`/sub-goals/${id}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching sub-goal:', error);
+      console.error('[API Error] Failed to fetch sub-goal:', {
+        endpoint: `/sub-goals/${id}`,
+        method: 'GET',
+        subGoalId: id,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch sub-goal');
     }
   },
@@ -152,7 +232,18 @@ export const subGoalsApi = {
       const response = await api.post('/sub-goals', data);
       return response.data.data;
     } catch (error) {
-      console.error('Error creating sub-goal:', error);
+      console.error('[API Error] Failed to create sub-goal:', {
+        endpoint: '/sub-goals',
+        method: 'POST',
+        requestData: data,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to create sub-goal');
     }
   },
@@ -163,7 +254,19 @@ export const subGoalsApi = {
       const response = await api.put(`/sub-goals/${id}`, data);
       return response.data.data;
     } catch (error) {
-      console.error('Error updating sub-goal:', error);
+      console.error('[API Error] Failed to update sub-goal:', {
+        endpoint: `/sub-goals/${id}`,
+        method: 'PUT',
+        subGoalId: id,
+        requestData: data,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to update sub-goal');
     }
   },
@@ -173,7 +276,18 @@ export const subGoalsApi = {
     try {
       await api.delete(`/sub-goals/${id}`);
     } catch (error) {
-      console.error('Error deleting sub-goal:', error);
+      console.error('[API Error] Failed to delete sub-goal:', {
+        endpoint: `/sub-goals/${id}`,
+        method: 'DELETE',
+        subGoalId: id,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to delete sub-goal');
     }
   },
@@ -187,7 +301,18 @@ export const sessionsApi = {
       const response = await api.get(`/sessions/sub-goal/${subGoalId}`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error('[API Error] Failed to fetch sessions:', {
+        endpoint: `/sessions/sub-goal/${subGoalId}`,
+        method: 'GET',
+        subGoalId,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch sessions');
     }
   },
@@ -198,7 +323,18 @@ export const sessionsApi = {
       const response = await api.get(`/sessions/sub-goal/${subGoalId}/active`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching active session:', error);
+      console.error('[API Error] Failed to fetch active session:', {
+        endpoint: `/sessions/sub-goal/${subGoalId}/active`,
+        method: 'GET',
+        subGoalId,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch active session');
     }
   },
@@ -209,7 +345,18 @@ export const sessionsApi = {
       const response = await api.post('/sessions', data);
       return response.data.data;
     } catch (error) {
-      console.error('Error starting session:', error);
+      console.error('[API Error] Failed to start session:', {
+        endpoint: '/sessions',
+        method: 'POST',
+        requestData: data,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to start session');
     }
   },
@@ -220,7 +367,18 @@ export const sessionsApi = {
       const response = await api.put(`/sessions/${id}/stop`, {});
       return response.data.data;
     } catch (error) {
-      console.error('Error stopping session:', error);
+      console.error('[API Error] Failed to stop session:', {
+        endpoint: `/sessions/${id}/stop`,
+        method: 'PUT',
+        sessionId: id,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to stop session');
     }
   },
@@ -231,7 +389,18 @@ export const sessionsApi = {
       const response = await api.get(`/sessions/sub-goal/${subGoalId}/stats`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching session stats:', error);
+      console.error('[API Error] Failed to fetch session stats:', {
+        endpoint: `/sessions/sub-goal/${subGoalId}/stats`,
+        method: 'GET',
+        subGoalId,
+        error: axios.isAxiosError(error) ? {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        } : error,
+      });
       throw new Error('Failed to fetch session statistics');
     }
   },
