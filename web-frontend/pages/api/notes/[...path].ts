@@ -35,7 +35,7 @@ export default async function handler(
     };
 
     // Only include body for methods that support it
-    if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+    if (req.method && !['GET', 'HEAD', 'DELETE'].includes(req.method)) {
       config.data = req.body;
     }
 

@@ -21,7 +21,7 @@ interface TypingUser {
 
 const ChatBox: React.FC = () => {
   const { theme } = useTheme();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -93,14 +93,14 @@ const ChatBox: React.FC = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    if (!token) return;
+    if (!user) return;
 
     let newSocket: Socket | null = null;
 
     // Fetch socket URL from API (server-side config)
     const initSocket = async () => {
       try {
-        const response = await fetch('/api/socket-config');
+        const response = await fetch('/api/socket-config', { credentials: 'include' });
         const data = await response.json();
         
         if (!data.success) {
@@ -113,9 +113,10 @@ const ChatBox: React.FC = () => {
         console.log('🔌 Connecting to Socket.IO at:', SOCKET_URL);
         
         newSocket = io(SOCKET_URL, {
-          auth: { token },
+          auth: { userId: user.id },
           path: '/socket.io',
           transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+          withCredentials: true, // Send cookies for authentication
         });
 
         newSocket.on('connect', () => {
@@ -226,7 +227,7 @@ const ChatBox: React.FC = () => {
         clearTimeout(newMessageTimeoutRef.current);
       }
     };
-  }, [token, user?.id, isMinimized]);
+  }, [user, user?.id, isMinimized]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();

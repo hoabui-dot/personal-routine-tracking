@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { testConnection } from './db';
 import { initializeSocket } from './socket';
 import { initializeCronJobs } from './services/cronService';
@@ -34,6 +35,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(cookieParser()); // Parse cookies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

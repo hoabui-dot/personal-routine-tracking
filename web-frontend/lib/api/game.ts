@@ -7,7 +7,7 @@ export const gameApi = {
   // Goals
   getGoals: async (year?: number): Promise<any[]> => {
     const url = year ? `${API_URL}/goals?year=${year}` : `${API_URL}/goals`;
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -17,6 +17,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/goals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ title, year }),
     });
     const data = await response.json();
@@ -28,6 +29,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/goals/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
     const data = await response.json();
@@ -38,6 +40,7 @@ export const gameApi = {
   deleteGoal: async (id: number): Promise<void> => {
     const response = await fetch(`${API_URL}/goals/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
@@ -45,7 +48,7 @@ export const gameApi = {
 
   // Users
   getUsers: async (): Promise<User[]> => {
-    const response = await fetch(`${API_URL}/game/users`);
+    const response = await fetch(`${API_URL}/game/users`, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -53,7 +56,7 @@ export const gameApi = {
 
   // User Goals
   getUserGoals: async (): Promise<UserGoal[]> => {
-    const response = await fetch(`${API_URL}/game/user-goals`);
+    const response = await fetch(`${API_URL}/game/user-goals`, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -63,6 +66,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/user-goals/${userId}/${goalId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ daily_duration_minutes: durationMinutes }),
     });
     const data = await response.json();
@@ -75,7 +79,7 @@ export const gameApi = {
     const url = userGoalId 
       ? `${API_URL}/goal-sub-tasks?userGoalId=${userGoalId}`
       : `${API_URL}/goal-sub-tasks`;
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -85,6 +89,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/goal-sub-tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ 
         user_goal_id: userGoalId, 
         title, 
@@ -100,6 +105,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/goal-sub-tasks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
     const data = await response.json();
@@ -110,6 +116,7 @@ export const gameApi = {
   deleteGoalSubTask: async (id: number): Promise<void> => {
     const response = await fetch(`${API_URL}/goal-sub-tasks/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
@@ -131,7 +138,7 @@ export const gameApi = {
     if (params?.date) queryParams.append('date', params.date);
 
     const url = `${API_URL}/game/daily-sessions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -139,7 +146,7 @@ export const gameApi = {
 
   getSummary: async (goalId?: number): Promise<GameSummary[]> => {
     const url = goalId ? `${API_URL}/game/daily-sessions/summary?goalId=${goalId}` : `${API_URL}/game/daily-sessions/summary`;
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: 'include' });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -149,6 +156,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ user_id: userId, goal_id: goalId, date, sub_task_id: subTaskId }),
     });
     const data = await response.json();
@@ -160,6 +168,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ session_id: sessionId }),
     });
     const data = await response.json();
@@ -171,6 +180,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ session_id: sessionId }),
     });
     const data = await response.json();
@@ -182,6 +192,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/pause`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ session_id: sessionId }),
     });
     const data = await response.json();
@@ -193,6 +204,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/resume`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ session_id: sessionId }),
     });
     const data = await response.json();
@@ -204,6 +216,7 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/game/daily-sessions/check-and-cleanup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.error);

@@ -11,7 +11,6 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -37,20 +36,31 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Load user from sessionStorage on mount
+  // Check if user is authenticated on mount
   useEffect(() => {
-    const storedToken = sessionStorage.getItem('token');
-    const storedUser = sessionStorage.getItem('user');
+    const checkAuth = async () => {
+      try {
+        const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/me`;
+        const response = await fetch(endpoint, {
+          credentials: 'include', // Send cookies
+        });
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+        const data = await response.json();
+
+        if (data.success) {
+          setUser(data.data);
+        }
+      } catch (error) {
+        console.error('[Auth Error] Failed to check authentication:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -61,6 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Send cookies
         body: JSON.stringify({ email, password }),
       });
 
@@ -70,11 +81,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store in sessionStorage (unlimited TTL until browser closes)
-      sessionStorage.setItem('token', data.data.token);
-      sessionStorage.setItem('user', JSON.stringify(data.data.user));
-
-      setToken(data.data.token);
       setUser(data.data.user);
 
       // Redirect to dashboard
@@ -93,25 +99,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    router.push('/login');
+  const logout = async () => {
+    try {
+      const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/logout`;
+      await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'include', // Send cookies
+      });
+    } catch (error) {
+      console.error('[Auth Error] Logout failed:', error);
+    } finally {
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   const refreshUser = async () => {
-    if (!token) return;
-
     console.log('Refreshing user data...');
 
     const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/me`;
     try {
       const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include', // Send cookies
       });
 
       const data = await response.json();
@@ -121,13 +130,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.success) {
         console.log('User avatar_url:', data.data.avatar_url);
         setUser(data.data);
-        sessionStorage.setItem('user', JSON.stringify(data.data));
       }
     } catch (error) {
       console.error('[Auth Error] Failed to refresh user:', {
         endpoint,
         method: 'GET',
-        hasToken: !!token,
         error: error instanceof Error ? {
           message: error.message,
           stack: error.stack,
@@ -137,8 +144,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const uploadAvatar = async (file: File) => {
-    if (!token) throw new Error('Not authenticated');
-
     const formData = new FormData();
     formData.append('avatar', file);
 
@@ -148,9 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include', // Send cookies
         body: formData,
       });
 
@@ -175,7 +178,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-        hasToken: !!token,
         error: error instanceof Error ? {
           message: error.message,
           stack: error.stack,
@@ -186,15 +188,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const deleteAvatar = async () => {
-    if (!token) throw new Error('Not authenticated');
-
     const endpoint = `${process.env.NEXT_PUBLIC_API_URL || '/api'}/auth/delete-avatar`;
     try {
       const response = await fetch(endpoint, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include', // Send cookies
       });
 
       const data = await response.json();
@@ -209,7 +207,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('[Auth Error] Failed to delete avatar:', {
         endpoint,
         method: 'DELETE',
-        hasToken: !!token,
         error: error instanceof Error ? {
           message: error.message,
           stack: error.stack,
@@ -221,11 +218,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value = {
     user,
-    token,
     login,
     logout,
     isLoading,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
     refreshUser,
     uploadAvatar,
     deleteAvatar,

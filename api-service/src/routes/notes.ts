@@ -12,29 +12,43 @@ const router = Router();
 // Convert database row to response format
 const formatNoteResponse = (note: Note): NoteResponse => ({
   id: note.id,
+  title: note.title,
   date: note.date,
   content: note.content,
+  type: note.type,
   created_at: note.created_at.toISOString(),
   updated_at: note.updated_at.toISOString(),
 });
 
-// GET /notes - Get all notes or filter by date range
+// GET /notes - Get all notes or filter by date range or type
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, date } = req.query;
+    const { startDate, endDate, date, type } = req.query;
     
     let queryText = 'SELECT * FROM notes';
     const queryParams: unknown[] = [];
+    const conditions: string[] = [];
 
     if (date) {
-      queryText += ' WHERE date = $1';
+      conditions.push(`date = $${conditions.length + 1}`);
       queryParams.push(date);
     } else if (startDate && endDate) {
-      queryText += ' WHERE date >= $1 AND date <= $2';
-      queryParams.push(startDate, endDate);
+      conditions.push(`date >= $${conditions.length + 1}`);
+      queryParams.push(startDate);
+      conditions.push(`date <= $${conditions.length + 1}`);
+      queryParams.push(endDate);
     }
 
-    queryText += ' ORDER BY date DESC';
+    if (type) {
+      conditions.push(`type = $${conditions.length + 1}`);
+      queryParams.push(type);
+    }
+
+    if (conditions.length > 0) {
+      queryText += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    queryText += ' ORDER BY updated_at DESC, date DESC';
 
     const result = await query(queryText, queryParams);
     const notes = result.rows.map(formatNoteResponse);
@@ -95,10 +109,19 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const noteData: CreateNoteRequest = req.body;
 
-    if (!noteData.date || !noteData.content) {
+    if (!noteData.title || !noteData.date || !noteData.content || !noteData.type) {
       res.status(400).json({
         success: false,
-        error: 'Date and content are required',
+        error: 'Title, date, content, and type are required',
+      });
+      return;
+    }
+
+    // Validate type
+    if (noteData.type !== 'richtext' && noteData.type !== 'mindmap') {
+      res.status(400).json({
+        success: false,
+        error: 'Type must be either "richtext" or "mindmap"',
       });
       return;
     }
@@ -114,8 +137,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
 
     const result = await query(
-      'INSERT INTO notes (date, content) VALUES ($1, $2) RETURNING *',
-      [noteData.date, noteData.content.trim()]
+      'INSERT INTO notes (title, date, content, type) VALUES ($1, $2, $3, $4) RETURNING *',
+      [noteData.title.trim(), noteData.date, noteData.content.trim(), noteData.type]
     );
 
     res.status(201).json({
@@ -147,18 +170,46 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!updateData.content) {
+    // Build dynamic update query
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let paramCount = 1;
+
+    if (updateData.title !== undefined) {
+      updates.push(`title = $${paramCount++}`);
+      values.push(updateData.title.trim());
+    }
+
+    if (updateData.content !== undefined) {
+      updates.push(`content = $${paramCount++}`);
+      values.push(updateData.content.trim());
+    }
+
+    if (updateData.type !== undefined) {
+      if (updateData.type !== 'richtext' && updateData.type !== 'mindmap') {
+        res.status(400).json({
+          success: false,
+          error: 'Type must be either "richtext" or "mindmap"',
+        });
+        return;
+      }
+      updates.push(`type = $${paramCount++}`);
+      values.push(updateData.type);
+    }
+
+    if (updates.length === 0) {
       res.status(400).json({
         success: false,
-        error: 'Content is required',
+        error: 'No fields to update',
       });
       return;
     }
 
-    const result = await query(
-      'UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-      [updateData.content.trim(), noteId]
-    );
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(noteId);
+
+    const queryText = `UPDATE notes SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const result = await query(queryText, values);
 
     if (result.rows.length === 0) {
       res.status(404).json({

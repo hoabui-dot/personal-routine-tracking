@@ -190,63 +190,145 @@ function generateReminderEmail(userName: string, goals: any[], completedGoals: n
   const goalsHtml = goals.map(goal => {
     const statusEmoji = goal.status === 'DONE' ? '✅' : goal.status === 'IN_PROGRESS' || goal.status === 'PAUSED' ? '⏳' : '⭕';
     const progressPercent = Math.round((goal.completed_minutes / goal.daily_duration_minutes) * 100);
+    const progressColor = progressPercent >= 100 ? '#10b981' : progressPercent >= 50 ? '#f59e0b' : '#8D6E63';
     
     return `
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 20px;">${statusEmoji}</span>
-            <span style="font-weight: 600; color: #1f2937;">${goal.title}</span>
+        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">${statusEmoji}</span>
+            <span style="font-weight: 600; color: #3E2723; font-size: 15px;">${goal.title}</span>
           </div>
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-          <span style="color: #6b7280;">${goal.completed_minutes} / ${goal.daily_duration_minutes} min</span>
+        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9; text-align: center;">
+          <span style="color: #6D4C41; font-weight: 500;">${goal.completed_minutes} / ${goal.daily_duration_minutes} min</span>
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-          <div style="background: #f3f4f6; border-radius: 9999px; height: 8px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #8b5cf6, #ec4899); height: 100%; width: ${progressPercent}%;"></div>
+        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9; text-align: center;">
+          <div style="background: #EFEBE9; border-radius: 9999px; height: 10px; overflow: hidden; width: 100px; margin: 0 auto;">
+            <div style="background: ${progressColor}; height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
           </div>
         </td>
       </tr>
     `;
   }).join('');
   
+  const motivationalMessages = [
+    "Every small step counts! 🌟",
+    "You've got this! 💪",
+    "Stay calm and focused! 🧘",
+    "Progress over perfection! ✨",
+    "One goal at a time! 🎯"
+  ];
+  const randomMessage = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
+  
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Daily Mission Reminder</title></head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Mission Reminder</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%); min-height: 100vh;">
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="background: white; border-radius: 24px 24px 0 0; padding: 40px 30px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-      <div style="font-size: 80px; margin-bottom: 20px;">🦫</div>
-      <h1 style="margin: 0; font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Good Morning, ${userName}!</h1>
-      <p style="margin: 16px 0 0 0; font-size: 18px; color: #6b7280;">Time to conquer your daily missions! 🎯</p>
-    </div>
-    <div style="background: white; padding: 30px; border-top: 3px solid #f3f4f6;">
-      <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 30px;">
-        <div><div style="font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${completedGoals}</div><div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Completed</div></div>
-        <div><div style="font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${inProgressGoals}</div><div style="font-size: 14px; color: #6b7280; margin-top: 4px;">In Progress</div></div>
-        <div><div style="font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #8b5cf6, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${totalGoals}</div><div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Total Goals</div></div>
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #8D6E63 0%, #A1887F 100%); border-radius: 20px 20px 0 0; padding: 40px 30px; text-align: center; box-shadow: 0 10px 25px rgba(141, 110, 99, 0.2); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);"></div>
+      <div style="position: relative; z-index: 1;">
+        <svg width="100" height="100" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 15px;">
+          <ellipse cx="40" cy="48" rx="28" ry="22" fill="white" opacity="0.95"/>
+          <ellipse cx="40" cy="28" rx="20" ry="18" fill="white"/>
+          <ellipse cx="28" cy="18" rx="5" ry="8" fill="white" opacity="0.9"/>
+          <ellipse cx="52" cy="18" rx="5" ry="8" fill="white" opacity="0.9"/>
+          <circle cx="33" cy="26" r="3" fill="#3E2723"/>
+          <circle cx="47" cy="26" r="3" fill="#3E2723"/>
+          <circle cx="33.5" cy="25" r="1.2" fill="white" opacity="0.9"/>
+          <circle cx="47.5" cy="25" r="1.2" fill="white" opacity="0.9"/>
+          <ellipse cx="40" cy="33" rx="4" ry="2.5" fill="#6D4C41"/>
+          <path d="M 35 35 Q 40 38 45 35" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="28" cy="65" rx="5" ry="8" fill="white" opacity="0.9"/>
+          <ellipse cx="40" cy="68" rx="5" ry="8" fill="white" opacity="0.9"/>
+          <ellipse cx="52" cy="65" rx="5" ry="8" fill="white" opacity="0.9"/>
+        </svg>
+        <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Good Morning, ${userName}! ☀️</h1>
+        <p style="margin: 12px 0 0 0; font-size: 18px; color: rgba(255,255,255,0.95);">Time to conquer your daily missions! 🎯</p>
       </div>
-      <h2 style="font-size: 20px; font-weight: 600; color: #1f2937; margin: 0 0 20px 0;">📋 Today's Missions</h2>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr style="background: #f9fafb;">
-          <th style="padding: 12px; text-align: left; font-size: 14px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Goal</th>
-          <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Progress</th>
-          <th style="padding: 12px; text-align: center; font-size: 14px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Status</th>
-        </tr></thead>
-        <tbody>${goalsHtml}</tbody>
-      </table>
     </div>
-    <div style="background: white; padding: 30px; text-align: center; border-top: 3px solid #f3f4f6;">
-      <a href="${env.FRONTEND_URL}/calendar" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">🚀 Start Your Day</a>
+    
+    <!-- Stats Section -->
+    <div style="background: white; padding: 35px 30px; border-top: 3px solid #EFEBE9;">
+      <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 35px;">
+        <div style="flex: 1;">
+          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);">
+            <span style="font-size: 32px; font-weight: 700; color: #2E7D32;">${completedGoals}</span>
+          </div>
+          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">✅ Completed</div>
+        </div>
+        <div style="flex: 1;">
+          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);">
+            <span style="font-size: 32px; font-weight: 700; color: #E65100;">${inProgressGoals}</span>
+          </div>
+          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">⏳ In Progress</div>
+        </div>
+        <div style="flex: 1;">
+          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #D7CCC8 0%, #BCAAA4 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(141, 110, 99, 0.2);">
+            <span style="font-size: 32px; font-weight: 700; color: #5D4037;">${totalGoals}</span>
+          </div>
+          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">🎯 Total Goals</div>
+        </div>
+      </div>
+      
+      <!-- Goals Table -->
+      <div style="background: linear-gradient(135deg, #EFEBE9 0%, #F5F5F5 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+        <h2 style="font-size: 20px; font-weight: 700; color: #3E2723; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;">
+          <span>📋</span> Today's Missions
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: linear-gradient(135deg, #8D6E63 0%, #A1887F 100%);">
+              <th style="padding: 14px 12px; text-align: left; font-size: 14px; font-weight: 600; color: white;">Goal</th>
+              <th style="padding: 14px 12px; text-align: center; font-size: 14px; font-weight: 600; color: white;">Time</th>
+              <th style="padding: 14px 12px; text-align: center; font-size: 14px; font-weight: 600; color: white;">Progress</th>
+            </tr>
+          </thead>
+          <tbody>${goalsHtml}</tbody>
+        </table>
+      </div>
+      
+      <!-- Motivational Message -->
+      <div style="background: linear-gradient(135deg, #FFF9C4 0%, #FFF59D 100%); border-left: 5px solid #F57C00; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <p style="margin: 0; font-size: 16px; color: #E65100; font-weight: 600; text-align: center;">
+          💡 ${randomMessage}
+        </p>
+      </div>
     </div>
-    <div style="background: white; border-radius: 0 0 24px 24px; padding: 30px; text-align: center; border-top: 3px solid #f3f4f6; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-      <p style="margin: 0; font-size: 14px; color: #6b7280;">💪 Stay consistent, stay awesome!</p>
-      <p style="margin: 12px 0 0 0; font-size: 12px; color: #9ca3af;">You're receiving this because you're part of the Daily Goals Game</p>
+    
+    <!-- CTA Button -->
+    <div style="background: white; padding: 35px 30px; text-align: center; border-top: 3px solid #EFEBE9;">
+      <a href="${env.FRONTEND_URL}/calendar" style="display: inline-block; padding: 18px 45px; background: linear-gradient(135deg, #8D6E63 0%, #A1887F 100%); color: white; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 17px; box-shadow: 0 6px 16px rgba(141, 110, 99, 0.3); transition: transform 0.2s;">
+        🚀 Start Your Day
+      </a>
     </div>
+    
+    <!-- Footer -->
+    <div style="background: white; border-radius: 0 0 20px 20px; padding: 30px; text-align: center; border-top: 3px solid #EFEBE9; box-shadow: 0 10px 25px rgba(141, 110, 99, 0.2);">
+      <p style="margin: 0 0 8px 0; font-size: 15px; color: #6D4C41; font-weight: 600;">💪 Stay consistent, stay awesome!</p>
+      <p style="margin: 0; font-size: 13px; color: #A1887F;">You're receiving this because you're part of Capybara Tracker</p>
+    </div>
+    
+    <!-- Capybara Footer -->
     <div style="text-align: center; margin-top: 30px;">
-      <div style="font-size: 40px; margin-bottom: 10px;">🦫</div>
-      <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500;">Powered by Capybara Productivity</p>
+      <svg width="60" height="60" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 12px; opacity: 0.7;">
+        <ellipse cx="60" cy="75" rx="40" ry="30" fill="#8D6E63" opacity="0.5"/>
+        <ellipse cx="60" cy="45" rx="28" ry="25" fill="#A1887F" opacity="0.5"/>
+        <ellipse cx="45" cy="28" rx="7" ry="10" fill="#8D6E63" opacity="0.5"/>
+        <ellipse cx="75" cy="28" rx="7" ry="10" fill="#8D6E63" opacity="0.5"/>
+        <path d="M 50 42 Q 52 44 54 42" stroke="#6D4C41" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+        <path d="M 66 42 Q 68 44 70 42" stroke="#6D4C41" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+        <ellipse cx="60" cy="52" rx="5" ry="3" fill="#6D4C41" opacity="0.5"/>
+        <path d="M 52 58 Q 60 62 68 58" stroke="#6D4C41" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+      </svg>
+      <p style="margin: 0; font-size: 14px; color: #8D6E63; font-weight: 600;">Powered by Capybara Tracker 🦫</p>
+      <p style="margin: 8px 0 0 0; font-size: 12px; color: #A1887F;">Your calm productivity companion</p>
     </div>
   </div>
 </body>

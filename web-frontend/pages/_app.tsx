@@ -1,4 +1,5 @@
 import '@/styles/globals.css';
+import 'reactflow/dist/style.css';
 import type { AppProps } from 'next/app';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';

@@ -70,7 +70,7 @@ const Settings: React.FC = () => {
           console.error('[Settings] Failed to fetch goals:', err);
           return []; // Return empty array if goals fetch fails
         }),
-        fetch('/api/cron-config').then(res => res.json()).then(data => {
+        fetch('/api/cron-config', { credentials: 'include' }).then(res => res.json()).then(data => {
           console.log('[Settings] Cron jobs loaded:', data.data?.length || 0);
           return data.success ? data.data : [];
         }).catch(err => {
@@ -262,6 +262,7 @@ const Settings: React.FC = () => {
       const response = await fetch(`/api/cron-config/${jobName}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ cron_expression: cronExpression }),
       });
       
@@ -284,6 +285,7 @@ const Settings: React.FC = () => {
       const response = await fetch(`/api/cron-config/${jobName}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ enabled }),
       });
       

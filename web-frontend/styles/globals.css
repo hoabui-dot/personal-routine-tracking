@@ -120,12 +120,63 @@ body {
   color: var(--color-gray-900);
   font-size: var(--font-size-base);
   line-height: 1.6;
+  /* Custom Capybara Cursor */
+  cursor: url('/capybara-cursor.svg') 16 16, auto;
 }
 
 a {
   color: inherit;
   text-decoration: none;
   transition: color var(--transition-fast);
+  cursor: url('/capybara-pointer.svg') 16 16, pointer;
+}
+
+/* Custom Capybara Cursors for Interactive Elements */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+select,
+.btn,
+.btn-modern,
+.nav-link,
+.mobile-nav-link,
+[role="button"],
+[onclick] {
+  cursor: url('/capybara-pointer.svg') 16 16, pointer !important;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+textarea {
+  cursor: url('/capybara-cursor.svg') 16 16, text;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  cursor: url('/capybara-cursor.svg') 16 16, text;
+}
+
+/* Draggable elements */
+[draggable="true"],
+.draggable {
+  cursor: url('/capybara-pointer.svg') 16 16, grab;
+}
+
+[draggable="true"]:active,
+.draggable:active {
+  cursor: url('/capybara-pointer.svg') 16 16, grabbing;
 }
 
 /* Modern Component Styles */

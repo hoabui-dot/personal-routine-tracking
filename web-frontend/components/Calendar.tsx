@@ -394,6 +394,8 @@ const Calendar: React.FC<CalendarProps> = ({ onDateSelect }) => {
         toast.success('Note updated successfully');
       } else {
         const newNote = await notesApi.createNote({
+          title: `Note for ${selectedDate}`,
+          type: 'richtext',
           date: selectedDate,
           content: noteContent,
         });

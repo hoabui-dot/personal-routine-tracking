@@ -19,6 +19,7 @@ export default async function handler(
       method: req.method,
       url,
       hasAuth: !!req.headers.authorization,
+      hasCookies: !!req.headers.cookie,
     });
 
     const config: any = {
@@ -27,8 +28,10 @@ export default async function handler(
       headers: {
         'Content-Type': req.headers['content-type'] || 'application/json',
         ...(req.headers.authorization && { Authorization: req.headers.authorization }),
+        ...(req.headers.cookie && { Cookie: req.headers.cookie }), // Forward cookies
       },
       validateStatus: () => true,
+      withCredentials: true, // Important for cookies
     };
 
     // Only include body for methods that support it
@@ -41,7 +44,14 @@ export default async function handler(
     console.log('[Auth API] Response:', {
       status: response.status,
       url,
+      hasCookies: !!response.headers['set-cookie'],
     });
+
+    // Forward Set-Cookie headers from backend to client
+    if (response.headers['set-cookie']) {
+      console.log('[Auth API] Forwarding Set-Cookie headers to client');
+      res.setHeader('Set-Cookie', response.headers['set-cookie']);
+    }
 
     res.status(response.status).json(response.data);
   } catch (error) {

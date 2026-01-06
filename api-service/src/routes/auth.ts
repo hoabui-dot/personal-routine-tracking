@@ -136,15 +136,33 @@ router.post('/login', async (req: Request, res: Response) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    // Set HTTP-Only cookie
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/', // Ensure cookie is available for all paths
+    });
+
+    console.log('[Auth /login] Cookie set successfully for user:', user.email);
+    console.log('[Auth /login] Cookie options:', {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
     res.json({
       success: true,
       data: {
-        token,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
           emailVerified: user.email_verified,
+          avatar_url: user.avatar_url,
         },
       },
     });
@@ -341,8 +359,14 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 // Get Current User (protected route)
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.cookies['auth_token'];
+    
+    console.log('[Auth /me] Checking authentication...');
+    console.log('[Auth /me] Cookies received:', Object.keys(req.cookies));
+    console.log('[Auth /me] auth_token present:', !!token);
+    
+    if (!token) {
+      console.log('[Auth /me] No token found in cookies');
       res.status(401).json({
         success: false,
         error: 'No token provided',
@@ -350,8 +374,8 @@ router.get('/me', async (req: Request, res: Response) => {
       return;
     }
 
-    const token = authHeader.substring(7);
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
+    console.log('[Auth /me] Token decoded successfully, userId:', decoded.userId);
 
     const result = await query(
       'SELECT id, name, email, email_verified, avatar_url, created_at, last_login FROM users WHERE id = $1',
@@ -359,6 +383,7 @@ router.get('/me', async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
+      console.log('[Auth /me] User not found in database');
       res.status(404).json({
         success: false,
         error: 'User not found',
@@ -366,12 +391,16 @@ router.get('/me', async (req: Request, res: Response) => {
       return;
     }
 
+    console.log('[Auth /me] User found:', result.rows[0].email);
     res.json({
       success: true,
       data: result.rows[0],
     });
   } catch (error) {
-    console.error('Error getting current user:', error);
+    console.error('[Auth /me] Error:', error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      console.log('[Auth /me] JWT verification failed:', error.message);
+    }
     res.status(401).json({
       success: false,
       error: 'Invalid token',
@@ -382,8 +411,9 @@ router.get('/me', async (req: Request, res: Response) => {
 // Upload Avatar (protected route)
 router.post('/upload-avatar', upload.single('avatar'), async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.cookies['auth_token'];
+    
+    if (!token) {
       res.status(401).json({
         success: false,
         error: 'No token provided',
@@ -391,7 +421,6 @@ router.post('/upload-avatar', upload.single('avatar'), async (req: Request, res:
       return;
     }
 
-    const token = authHeader.substring(7);
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
 
     if (!req.file) {
@@ -462,8 +491,9 @@ router.post('/upload-avatar', upload.single('avatar'), async (req: Request, res:
 // Delete Avatar (protected route)
 router.delete('/delete-avatar', async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.cookies['auth_token'];
+    
+    if (!token) {
       res.status(401).json({
         success: false,
         error: 'No token provided',
@@ -471,7 +501,6 @@ router.delete('/delete-avatar', async (req: Request, res: Response) => {
       return;
     }
 
-    const token = authHeader.substring(7);
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
 
     // Get current user avatar
@@ -522,6 +551,14 @@ router.delete('/delete-avatar', async (req: Request, res: Response) => {
 
 // Logout (client-side token removal, but we can log it)
 router.post('/logout', async (_: Request, res: Response) => {
+  // Clear the HTTP-Only cookie
+  res.clearCookie('auth_token', {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  });
+  
   res.json({
     success: true,
     message: 'Logged out successfully',

@@ -15,6 +15,7 @@ export async function proxyRequest(
       method: req.method,
       url: targetUrl,
       hasAuth: !!req.headers.authorization,
+      hasCookies: !!req.headers.cookie,
       body: req.method !== 'GET' ? req.body : undefined,
     });
 
@@ -24,8 +25,10 @@ export async function proxyRequest(
       headers: {
         'Content-Type': req.headers['content-type'] || 'application/json',
         ...(req.headers.authorization && { Authorization: req.headers.authorization }),
+        ...(req.headers.cookie && { Cookie: req.headers.cookie }), // Forward cookies
       },
       validateStatus: () => true, // Don't throw on any status code
+      withCredentials: true, // Important for cookies
     };
 
     // Only include body for methods that support it
@@ -39,7 +42,13 @@ export async function proxyRequest(
       status: response.status,
       url: targetUrl,
       success: response.data?.success,
+      hasCookies: !!response.headers['set-cookie'],
     });
+
+    // Forward Set-Cookie headers from backend to client
+    if (response.headers['set-cookie']) {
+      res.setHeader('Set-Cookie', response.headers['set-cookie']);
+    }
 
     res.status(response.status).json(response.data);
   } catch (error) {

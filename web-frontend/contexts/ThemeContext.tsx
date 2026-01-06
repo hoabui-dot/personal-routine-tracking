@@ -119,46 +119,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        // Get user from localStorage (set by AuthContext)
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          
-          // Fetch theme from API
-          const response = await fetch(`/api/user-theme/${user.id}`);
-          const data = await response.json();
-          
-          if (data.success && data.data.theme) {
-            setCurrentTheme(data.data.theme as ThemeName);
-          } else {
-            // Fallback to localStorage for backward compatibility
-            const savedTheme = localStorage.getItem('app-theme') as ThemeName;
-            if (savedTheme && themes[savedTheme]) {
-              setCurrentTheme(savedTheme);
-            }
-          }
+        // Try to load theme from localStorage first (fast)
+        const savedTheme = localStorage.getItem('app-theme') as ThemeName;
+        if (savedTheme && themes[savedTheme]) {
+          setCurrentTheme(savedTheme);
         } else {
-          // No user logged in, use localStorage
-          const savedTheme = localStorage.getItem('app-theme') as ThemeName;
-          if (savedTheme && themes[savedTheme]) {
-            setCurrentTheme(savedTheme);
+          // Check old theme format for backward compatibility
+          const oldTheme = localStorage.getItem('theme');
+          if (oldTheme === 'dark') {
+            setCurrentTheme('capybara-dark');
           } else {
-            // Check old theme format for backward compatibility
-            const oldTheme = localStorage.getItem('theme');
-            if (oldTheme === 'dark') {
-              setCurrentTheme('capybara-dark');
-            } else {
-              setCurrentTheme('capybara-light');
-            }
+            setCurrentTheme('capybara-light');
           }
         }
       } catch (error) {
         console.error('Failed to load theme:', error);
-        // Fallback to localStorage
-        const savedTheme = localStorage.getItem('app-theme') as ThemeName;
-        if (savedTheme && themes[savedTheme]) {
-          setCurrentTheme(savedTheme);
-        }
       } finally {
         setLoading(false);
       }
@@ -167,25 +142,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadTheme();
   }, []);
 
-  const setTheme = async (theme: ThemeName) => {
+  const setTheme = (theme: ThemeName) => {
     setCurrentTheme(theme);
     localStorage.setItem('app-theme', theme);
-    
-    // Save to database if user is logged in
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        await fetch(`/api/user-theme/${user.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ theme }),
-        });
-      }
-    } catch (error) {
-      console.error('Failed to save theme to database:', error);
-      // Theme is still saved to localStorage, so it's not critical
-    }
   };
 
   const toggleTheme = () => {
