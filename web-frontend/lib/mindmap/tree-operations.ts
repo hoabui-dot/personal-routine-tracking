@@ -125,7 +125,8 @@ export function deleteNode(tree: MindMapTree, nodeId: string): MindMapTree {
 export function updateNodeText(
   tree: MindMapTree,
   nodeId: string,
-  text: string
+  text: string,
+  htmlContent?: string
 ): MindMapTree {
   const node = tree.nodes[nodeId];
   if (!node) return tree;
@@ -134,7 +135,7 @@ export function updateNodeText(
     ...tree,
     nodes: {
       ...tree.nodes,
-      [nodeId]: { ...node, text },
+      [nodeId]: { ...node, text, htmlContent },
     },
   };
 }

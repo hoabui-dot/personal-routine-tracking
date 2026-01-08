@@ -309,15 +309,6 @@ export default function NotesPage() {
                   }}>
                     {new Date(note.date).toLocaleDateString()}
                   </div>
-                  <div style={{
-                    fontSize: '0.8125rem',
-                    opacity: 0.7,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {note.content.replace(/<[^>]*>/g, '').substring(0, 50)}...
-                  </div>
                 </div>
               ))
             )}

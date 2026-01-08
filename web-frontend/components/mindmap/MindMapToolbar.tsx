@@ -16,6 +16,12 @@ interface MindMapToolbarProps {
   onResetView: () => void;
   onExport: () => void;
   onImport: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onToggleFullscreen: () => void;
+  onToggleLock: () => void;
+  isFullscreen: boolean;
+  isLocked: boolean;
 }
 
 export const MindMapToolbar: React.FC<MindMapToolbarProps> = ({
@@ -30,6 +36,12 @@ export const MindMapToolbar: React.FC<MindMapToolbarProps> = ({
   onResetView,
   onExport,
   onImport,
+  onZoomIn,
+  onZoomOut,
+  onToggleFullscreen,
+  onToggleLock,
+  isFullscreen,
+  isLocked,
 }) => {
   const { theme } = useTheme();
 
@@ -135,6 +147,24 @@ export const MindMapToolbar: React.FC<MindMapToolbarProps> = ({
       {/* View */}
       <Button onClick={onResetView} title="Reset view">
         Center
+      </Button>
+      <Button onClick={onZoomIn} title="Zoom in (+)">
+        🔍+
+      </Button>
+      <Button onClick={onZoomOut} title="Zoom out (-)">
+        🔍−
+      </Button>
+      <Button 
+        onClick={onToggleFullscreen} 
+        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+      >
+        {isFullscreen ? '⛶' : '⛶'}
+      </Button>
+      <Button 
+        onClick={onToggleLock} 
+        title={isLocked ? "Unlock (enable dragging)" : "Lock (disable dragging)"}
+      >
+        {isLocked ? '🔒' : '🔓'}
       </Button>
 
       <div style={{ width: '1px', background: theme.border }} />

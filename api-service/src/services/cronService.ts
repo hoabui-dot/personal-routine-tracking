@@ -194,16 +194,22 @@ function generateReminderEmail(userName: string, goals: any[], completedGoals: n
     
     return `
       <tr>
-        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 24px;">${statusEmoji}</span>
-            <span style="font-weight: 600; color: #3E2723; font-size: 15px;">${goal.title}</span>
-          </div>
+        <td style="padding: 16px; border-bottom: 1px solid #EFEBE9; vertical-align: middle;">
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td style="padding: 0; width: 32px; vertical-align: middle;">
+                <span style="font-size: 24px; display: inline-block; line-height: 1;">${statusEmoji}</span>
+              </td>
+              <td style="padding: 0 0 0 8px; vertical-align: middle;">
+                <span style="font-weight: 600; color: #3E2723; font-size: 15px; line-height: 1.4; display: inline-block;">${goal.title}</span>
+              </td>
+            </tr>
+          </table>
         </td>
-        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9; text-align: center;">
-          <span style="color: #6D4C41; font-weight: 500;">${goal.completed_minutes} / ${goal.daily_duration_minutes} min</span>
+        <td style="padding: 16px; border-bottom: 1px solid #EFEBE9; text-align: center; vertical-align: middle; white-space: nowrap;">
+          <span style="color: #6D4C41; font-weight: 500; font-size: 14px;">${goal.completed_minutes} / ${goal.daily_duration_minutes} min</span>
         </td>
-        <td style="padding: 15px 12px; border-bottom: 1px solid #EFEBE9; text-align: center;">
+        <td style="padding: 16px; border-bottom: 1px solid #EFEBE9; text-align: center; vertical-align: middle;">
           <div style="background: #EFEBE9; border-radius: 9999px; height: 10px; overflow: hidden; width: 100px; margin: 0 auto;">
             <div style="background: ${progressColor}; height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
           </div>
@@ -255,43 +261,52 @@ function generateReminderEmail(userName: string, goals: any[], completedGoals: n
     </div>
     
     <!-- Stats Section -->
-    <div style="background: white; padding: 35px 30px; border-top: 3px solid #EFEBE9;">
-      <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 35px;">
-        <div style="flex: 1;">
-          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);">
-            <span style="font-size: 32px; font-weight: 700; color: #2E7D32;">${completedGoals}</span>
-          </div>
-          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">✅ Completed</div>
-        </div>
-        <div style="flex: 1;">
-          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);">
-            <span style="font-size: 32px; font-weight: 700; color: #E65100;">${inProgressGoals}</span>
-          </div>
-          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">⏳ In Progress</div>
-        </div>
-        <div style="flex: 1;">
-          <div style="width: 70px; height: 70px; margin: 0 auto 10px; background: linear-gradient(135deg, #D7CCC8 0%, #BCAAA4 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(141, 110, 99, 0.2);">
-            <span style="font-size: 32px; font-weight: 700; color: #5D4037;">${totalGoals}</span>
-          </div>
-          <div style="font-size: 13px; color: #6D4C41; font-weight: 600;">🎯 Total Goals</div>
-        </div>
-      </div>
+    <div style="background: white; padding: 30px 20px; border-top: 3px solid #EFEBE9;">
+      <table style="width: 100%; max-width: 500px; margin: 0 auto 30px; border-collapse: separate; border-spacing: 15px 0;">
+        <tr>
+          <td style="text-align: center; vertical-align: top; padding: 0;">
+            <div style="width: 80px; height: 80px; margin: 0 auto 12px; background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);">
+              <span style="font-size: 36px; font-weight: 700; color: #2E7D32; line-height: 1;">${completedGoals}</span>
+            </div>
+            <div style="font-size: 13px; color: #6D4C41; font-weight: 600; line-height: 1.3;">✅ Completed</div>
+          </td>
+          <td style="text-align: center; vertical-align: top; padding: 0;">
+            <div style="width: 80px; height: 80px; margin: 0 auto 12px; background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);">
+              <span style="font-size: 36px; font-weight: 700; color: #E65100; line-height: 1;">${inProgressGoals}</span>
+            </div>
+            <div style="font-size: 13px; color: #6D4C41; font-weight: 600; line-height: 1.3;">⏳ In Progress</div>
+          </td>
+          <td style="text-align: center; vertical-align: top; padding: 0;">
+            <div style="width: 80px; height: 80px; margin: 0 auto 12px; background: linear-gradient(135deg, #D7CCC8 0%, #BCAAA4 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(141, 110, 99, 0.2);">
+              <span style="font-size: 36px; font-weight: 700; color: #5D4037; line-height: 1;">${totalGoals}</span>
+            </div>
+            <div style="font-size: 13px; color: #6D4C41; font-weight: 600; line-height: 1.3;">🎯 Total Goals</div>
+          </td>
+        </tr>
+      </table>
       
       <!-- Goals Table -->
-      <div style="background: linear-gradient(135deg, #EFEBE9 0%, #F5F5F5 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-        <h2 style="font-size: 20px; font-weight: 700; color: #3E2723; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;">
-          <span>📋</span> Today's Missions
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: linear-gradient(135deg, #8D6E63 0%, #A1887F 100%);">
-              <th style="padding: 14px 12px; text-align: left; font-size: 14px; font-weight: 600; color: white;">Goal</th>
-              <th style="padding: 14px 12px; text-align: center; font-size: 14px; font-weight: 600; color: white;">Time</th>
-              <th style="padding: 14px 12px; text-align: center; font-size: 14px; font-weight: 600; color: white;">Progress</th>
-            </tr>
-          </thead>
-          <tbody>${goalsHtml}</tbody>
+      <div style="background: linear-gradient(135deg, #EFEBE9 0%, #F5F5F5 100%); padding: 25px 20px; border-radius: 12px; margin-bottom: 25px;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <tr>
+            <td style="padding: 0;">
+              <span style="font-size: 24px; vertical-align: middle; display: inline-block; margin-right: 8px;">📋</span>
+              <span style="font-size: 20px; font-weight: 700; color: #3E2723; vertical-align: middle; display: inline-block;">Today's Missions</span>
+            </td>
+          </tr>
         </table>
+        <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: linear-gradient(135deg, #8D6E63 0%, #A1887F 100%);">
+                <th style="padding: 16px; text-align: left; font-size: 14px; font-weight: 600; color: white; border: none;">Goal</th>
+                <th style="padding: 16px; text-align: center; font-size: 14px; font-weight: 600; color: white; border: none; white-space: nowrap;">Time</th>
+                <th style="padding: 16px; text-align: center; font-size: 14px; font-weight: 600; color: white; border: none; min-width: 120px;">Progress</th>
+              </tr>
+            </thead>
+            <tbody>${goalsHtml}</tbody>
+          </table>
+        </div>
       </div>
       
       <!-- Motivational Message -->

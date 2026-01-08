@@ -2,13 +2,13 @@
 
 import React, { useMemo } from 'react';
 import { EdgeProps, BaseEdge, useNodes } from 'reactflow';
-import { getEdgeConnectionPoints, getStraightPath } from '@/lib/mindmap/floating-edge-utils';
+import { getEdgeConnectionPoints, getSmoothStepPath } from '@/lib/mindmap/floating-edge-utils';
 
-interface StraightEdgeData {
-  // No longer need pre-calculated anchors
-}
-
-export const AdjustableEdge: React.FC<EdgeProps<StraightEdgeData>> = ({
+/**
+ * Alternative edge component with smooth step (rounded corners) paths
+ * Use this instead of AdjustableEdge for a softer, more organic look
+ */
+export const SmoothStepEdge: React.FC<EdgeProps> = ({
   id,
   source,
   target,
@@ -22,15 +22,15 @@ export const AdjustableEdge: React.FC<EdgeProps<StraightEdgeData>> = ({
 }) => {
   const nodes = useNodes();
 
-  // Calculate floating connection points based on actual node positions
+  // Calculate floating connection points with smooth step path
   const path = useMemo(() => {
     // Find source and target nodes
     const sourceNode = nodes.find(n => n.id === source);
     const targetNode = nodes.find(n => n.id === target);
 
     if (!sourceNode || !targetNode) {
-      // Fallback to default positions
-      return getStraightPath(sourceX, sourceY, targetX, targetY);
+      // Fallback to straight line
+      return `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
     }
 
     // Get node dimensions
@@ -51,11 +51,14 @@ export const AdjustableEdge: React.FC<EdgeProps<StraightEdgeData>> = ({
     // Calculate floating connection points
     const connectionPoints = getEdgeConnectionPoints(sourceDimensions, targetDimensions);
 
-    return getStraightPath(
+    // Use smooth step path with rounded corners
+    return getSmoothStepPath(
       connectionPoints.source.x,
       connectionPoints.source.y,
       connectionPoints.target.x,
-      connectionPoints.target.y
+      connectionPoints.target.y,
+      connectionPoints.source.position,
+      12 // border radius for corners
     );
   }, [nodes, source, target, sourceX, sourceY, targetX, targetY]);
 

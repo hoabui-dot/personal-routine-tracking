@@ -13,7 +13,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import { useTheme } from '../contexts/ThemeContext';
-import { MindMapNode } from './mindmap/MindMapNode';
+import { RichTextMindMapNode } from './mindmap/RichTextMindMapNode';
 import { AdjustableEdge } from './mindmap/AdjustableEdge';
 import { MindMapToolbar } from './mindmap/MindMapToolbar';
 import { MindMapTree } from '@/lib/mindmap/types';
@@ -37,36 +37,26 @@ interface MindMapEditorProps {
   onChange: (content: string) => void;
 }
 
-// Edge customization storage
-interface EdgeCustomization {
-  [edgeId: string]: {
-    controlPointOffset: { x: number; y: number };
-  };
-}
-
 // Parse initial content
-function parseInitialContent(content: string): { tree: MindMapTree; edgeCustomizations: EdgeCustomization } {
+function parseInitialContent(content: string): MindMapTree {
   if (!content || content === '<p></p>') {
-    return { tree: createEmptyTree(), edgeCustomizations: {} };
+    return createEmptyTree();
   }
 
   try {
     const parsed = JSON.parse(content);
     
-    // Check if it's the new format with edgeCustomizations
-    if (parsed.tree && parsed.edgeCustomizations) {
+    // Check if it's the new format with edgeCustomizations (legacy)
+    if (parsed.tree) {
       const imported = importFromJSON(JSON.stringify(parsed.tree));
-      return {
-        tree: imported || createEmptyTree(),
-        edgeCustomizations: parsed.edgeCustomizations || {},
-      };
+      return imported || createEmptyTree();
     }
     
     // Old format - just the tree
     const imported = importFromJSON(content);
-    return { tree: imported || createEmptyTree(), edgeCustomizations: {} };
+    return imported || createEmptyTree();
   } catch {
-    return { tree: createEmptyTree(), edgeCustomizations: {} };
+    return createEmptyTree();
   }
 }
 
@@ -75,13 +65,15 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
   const { theme } = useTheme();
   const { fitView } = useReactFlow();
   
-  // Initialize tree, edge customizations, and history
-  const initialData = useMemo(() => parseInitialContent(content), [content]);
-  const [tree, setTree] = useState<MindMapTree>(initialData.tree);
-  const [edgeCustomizations, setEdgeCustomizations] = useState<EdgeCustomization>(initialData.edgeCustomizations);
+  // Initialize tree and history
+  const initialTree = useMemo(() => parseInitialContent(content), [content]);
+  const [tree, setTree] = useState<MindMapTree>(initialTree);
   const historyRef = useRef<HistoryManager>(new HistoryManager(tree));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [isDraggingEdge, setIsDraggingEdge] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [, forceUpdate] = useState(0);
 
   // Auto-select root node on mount
@@ -93,48 +85,21 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
 
   // Save to parent component
   const saveTree = useCallback(
-    (newTree: MindMapTree, customizations: EdgeCustomization) => {
-      const data = {
-        tree: JSON.parse(exportToJSON(newTree)),
-        edgeCustomizations: customizations,
-      };
-      onChange(JSON.stringify(data));
+    (newTree: MindMapTree) => {
+      onChange(exportToJSON(newTree));
     },
     [onChange]
   );
 
   // Update tree with history
   const updateTree = useCallback(
-    (newTree: MindMapTree, customizations?: EdgeCustomization) => {
+    (newTree: MindMapTree) => {
       setTree(newTree);
       historyRef.current.push(newTree);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      saveTree(newTree, customizations || edgeCustomizations);
+      saveTree(newTree);
     },
-    [saveTree, edgeCustomizations]
+    [saveTree]
   );
-
-  // Handle edge control point changes
-  const handleEdgeControlPointChange = useCallback(
-    (edgeId: string, offset: { x: number; y: number }) => {
-      const newCustomizations = {
-        ...edgeCustomizations,
-        [edgeId]: { controlPointOffset: offset },
-      };
-      setEdgeCustomizations(newCustomizations);
-      saveTree(tree, newCustomizations);
-    },
-    [edgeCustomizations, tree, saveTree]
-  );
-
-  // Handle edge drag start/end
-  const handleEdgeDragStart = useCallback(() => {
-    setIsDraggingEdge(true);
-  }, []);
-
-  const handleEdgeDragEnd = useCallback(() => {
-    setIsDraggingEdge(false);
-  }, []);
 
   // Node operations
   const handleAddChild = useCallback(() => {
@@ -157,8 +122,8 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
   }, [tree, selectedNodeId, updateTree]);
 
   const handleTextChange = useCallback(
-    (nodeId: string, text: string) => {
-      const newTree = updateNodeText(tree, nodeId, text);
+    (nodeId: string, text: string, html?: string) => {
+      const newTree = updateNodeText(tree, nodeId, text, html);
       updateTree(newTree);
     },
     [tree, updateTree]
@@ -186,19 +151,19 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
     const prevTree = historyRef.current.undo();
     if (prevTree) {
       setTree(prevTree);
-      saveTree(prevTree, edgeCustomizations);
+      saveTree(prevTree);
       forceUpdate(n => n + 1);
     }
-  }, [saveTree, edgeCustomizations]);
+  }, [saveTree]);
 
   const handleRedo = useCallback(() => {
     const nextTree = historyRef.current.redo();
     if (nextTree) {
       setTree(nextTree);
-      saveTree(nextTree, edgeCustomizations);
+      saveTree(nextTree);
       forceUpdate(n => n + 1);
     }
-  }, [saveTree, edgeCustomizations]);
+  }, [saveTree]);
 
   // Import/Export
   const handleExport = useCallback(() => {
@@ -227,13 +192,13 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         if (imported) {
           setTree(imported);
           historyRef.current.clear(imported);
-          saveTree(imported, edgeCustomizations);
+          saveTree(imported);
         }
       };
       reader.readAsText(file);
     };
     input.click();
-  }, [saveTree, edgeCustomizations]);
+  }, [saveTree]);
 
   // Node selection
   const handleNodeClick = useCallback((nodeId: string) => {
@@ -257,12 +222,59 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
     fitView({ duration: 300, padding: 0.2 });
   }, [fitView]);
 
+  // Zoom controls
+  const handleZoomIn = useCallback(() => {
+    const currentZoom = reactFlowInstance?.getZoom() || 1;
+    reactFlowInstance?.zoomTo(Math.min(currentZoom * 1.2, 2));
+  }, [reactFlowInstance]);
+
+  const handleZoomOut = useCallback(() => {
+    const currentZoom = reactFlowInstance?.getZoom() || 1;
+    reactFlowInstance?.zoomTo(Math.max(currentZoom / 1.2, 0.1));
+  }, [reactFlowInstance]);
+
+  // Fullscreen toggle
+  const handleToggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    }
+  }, []);
+
+  // Lock toggle (disable/enable node dragging)
+  const handleToggleLock = useCallback(() => {
+    setIsLocked(prev => !prev);
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if user is typing in an input/textarea
       const target = e.target as HTMLElement;
-      const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.classList.contains('ProseMirror');
 
       // Undo/Redo (works even when editing)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
@@ -272,6 +284,26 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         } else {
           handleUndo();
         }
+        return;
+      }
+
+      // Zoom shortcuts (works even when editing)
+      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        handleZoomIn();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        handleZoomOut();
+        return;
+      }
+
+      // Fullscreen shortcut
+      if (e.key === 'F11' || ((e.metaKey || e.ctrlKey) && e.key === 'f')) {
+        e.preventDefault();
+        handleToggleFullscreen();
         return;
       }
 
@@ -323,6 +355,9 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
     handleDelete,
     handleUndo,
     handleRedo,
+    handleZoomIn,
+    handleZoomOut,
+    handleToggleFullscreen,
   ]);
 
   // Convert tree to React Flow format
@@ -334,19 +369,15 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         handleNodeClick,
         handleNodeDoubleClick,
         handleToggleCollapse,
-        handleTextChange,
-        edgeCustomizations,
-        handleEdgeControlPointChange,
-        handleEdgeDragStart,
-        handleEdgeDragEnd
+        handleTextChange
       ),
-    [tree, selectedNodeId, handleNodeClick, handleNodeDoubleClick, handleToggleCollapse, handleTextChange, edgeCustomizations, handleEdgeControlPointChange, handleEdgeDragStart, handleEdgeDragEnd]
+    [tree, selectedNodeId, handleNodeClick, handleNodeDoubleClick, handleToggleCollapse, handleTextChange]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
 
-  const nodeTypes: NodeTypes = useMemo(() => ({ mindMapNode: MindMapNode }), []);
+  const nodeTypes: NodeTypes = useMemo(() => ({ mindMapNode: RichTextMindMapNode }), []);
   const edgeTypes: EdgeTypes = useMemo(() => ({ adjustable: AdjustableEdge }), []);
 
   // Update nodes when tree changes
@@ -356,7 +387,7 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
   }, [flowNodes, flowEdges, setNodes, setEdges]);
 
   return (
-    <div style={{ height: '100%', width: '100%', position: 'relative' }}>
+    <div ref={containerRef} style={{ height: '100%', width: '100%', position: 'relative' }}>
       <MindMapToolbar
         canUndo={historyRef.current.canUndo()}
         canRedo={historyRef.current.canRedo()}
@@ -369,6 +400,12 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         onResetView={handleResetView}
         onExport={handleExport}
         onImport={handleImport}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onToggleFullscreen={handleToggleFullscreen}
+        onToggleLock={handleToggleLock}
+        isFullscreen={isFullscreen}
+        isLocked={isLocked}
       />
 
       <ReactFlow
@@ -379,6 +416,7 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         onNodeClick={(_, node) => handleNodeClick(node.id)}
         onNodeDragStop={handleNodeDragStop}
         onPaneClick={handlePaneClick}
+        onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -386,10 +424,9 @@ const MindMapEditorInner: React.FC<MindMapEditorProps> = ({ content, onChange })
         style={{ background: theme.background }}
         minZoom={0.1}
         maxZoom={2}
-        nodesDraggable={true}
+        nodesDraggable={!isLocked}
         nodesConnectable={false}
         elementsSelectable={true}
-        panOnDrag={!isDraggingEdge}
       >
         <Controls
           style={{

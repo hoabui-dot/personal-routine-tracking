@@ -3,6 +3,7 @@ export interface MindMapNode {
   id: string;
   parentId?: string;
   text: string;
+  htmlContent?: string; // Rich text HTML content
   children: string[];
   collapsed?: boolean;
   direction?: 'left' | 'right';

@@ -2,17 +2,10 @@ import { Node, Edge, MarkerType } from 'reactflow';
 import { MindMapTree } from './types';
 import { calculateLayout, getDepthColor } from './layout-engine';
 import { getVisibleNodes, getNodeDepth } from './tree-operations';
-import { calculateEdgeAnchors, NodeBounds } from './anchor-solver';
 
 export interface FlowData {
   nodes: Node[];
   edges: Edge[];
-}
-
-interface EdgeCustomization {
-  [edgeId: string]: {
-    controlPointOffset: { x: number; y: number };
-  };
 }
 
 // Convert tree to React Flow nodes and edges
@@ -22,11 +15,7 @@ export function treeToFlow(
   onNodeClick: (id: string) => void,
   onNodeDoubleClick: (id: string) => void,
   onToggleCollapse: (id: string) => void,
-  onTextChange: (id: string, text: string) => void,
-  edgeCustomizations: EdgeCustomization = {},
-  onEdgeControlPointChange?: (edgeId: string, offset: { x: number; y: number }) => void,
-  onEdgeDragStart?: () => void,
-  onEdgeDragEnd?: () => void
+  onTextChange: (id: string, text: string) => void
 ): FlowData {
   const layout = calculateLayout(tree);
   const visible = getVisibleNodes(tree);
@@ -52,6 +41,7 @@ export function treeToFlow(
       data: {
         id: nodeId,
         text: node.text,
+        htmlContent: node.htmlContent,
         isRoot,
         isSelected,
         hasChildren,
@@ -67,7 +57,7 @@ export function treeToFlow(
     });
   });
 
-  // Create edges with dynamic anchors
+  // Create edges with dynamic floating connection points
   visible.forEach(nodeId => {
     const node = tree.nodes[nodeId];
     if (!node || !node.parentId || !visible.has(node.parentId)) return;
@@ -75,29 +65,6 @@ export function treeToFlow(
     const depth = getNodeDepth(tree, nodeId);
     const color = getDepthColor(depth, node.color);
     const edgeId = `e-${node.parentId}-${nodeId}`;
-
-    // Get node bounds for anchor calculation
-    const sourceLayout = layout.get(node.parentId);
-    const targetLayout = layout.get(nodeId);
-    
-    if (!sourceLayout || !targetLayout) return;
-
-    const sourceBounds: NodeBounds = {
-      x: sourceLayout.x,
-      y: sourceLayout.y,
-      width: sourceLayout.width,
-      height: sourceLayout.height,
-    };
-
-    const targetBounds: NodeBounds = {
-      x: targetLayout.x,
-      y: targetLayout.y,
-      width: targetLayout.width,
-      height: targetLayout.height,
-    };
-
-    // Calculate dynamic anchor points
-    const anchors = calculateEdgeAnchors(sourceBounds, targetBounds);
 
     edges.push({
       id: edgeId,
@@ -114,17 +81,7 @@ export function treeToFlow(
         type: MarkerType.ArrowClosed,
         color: color,
       },
-      data: {
-        controlPointOffset: edgeCustomizations[edgeId]?.controlPointOffset || { x: 0, y: 0 },
-        onControlPointChange: onEdgeControlPointChange,
-        onDragStart: onEdgeDragStart,
-        onDragEnd: onEdgeDragEnd,
-        // Pass node bounds and calculated anchors
-        sourceBounds,
-        targetBounds,
-        sourceAnchor: anchors.source,
-        targetAnchor: anchors.target,
-      },
+      data: {},
     });
   });
 
