@@ -57,8 +57,9 @@ async function stopPausedSessions() {
     
     const sessionsResult = await query(`
       SELECT 
-        ds.id, ds.user_id, ds.goal_id, ds.date, ds.duration_completed_minutes, ds.status,
-        ug.daily_duration_minutes as target_minutes, u.name as user_name, g.title as goal_title
+        ds.id, ds.user_id, ds.goal_id, ds.date, ds.duration_completed_minutes, ds.status, ds.sub_task_id,
+        ug.id as user_goal_id, ug.daily_duration_minutes as target_minutes, 
+        u.name as user_name, g.title as goal_title
       FROM daily_sessions ds
       JOIN user_goals ug ON ds.user_id = ug.user_id AND ds.goal_id = ug.goal_id
       JOIN users u ON ds.user_id = u.id
@@ -69,7 +70,36 @@ async function stopPausedSessions() {
     console.log(`[Cron] Found ${sessionsResult.rows.length} paused/in-progress sessions from ${yesterdayStr}`);
     
     for (const session of sessionsResult.rows) {
-      const isCompleted = session.duration_completed_minutes >= session.target_minutes;
+      let isCompleted = false;
+      
+      // Check if this goal has sub-tasks
+      const subTasksResult = await query(`
+        SELECT id, duration_minutes FROM goal_sub_tasks 
+        WHERE user_goal_id = $1 
+        ORDER BY display_order
+      `, [session.user_goal_id]);
+      
+      if (subTasksResult.rows.length > 0) {
+        // Goal has sub-tasks - check if all are completed
+        const completedSubTasksResult = await query(`
+          SELECT COUNT(*) as completed_count 
+          FROM completed_subtasks 
+          WHERE session_id = $1
+        `, [session.id]);
+        
+        const completedCount = parseInt(completedSubTasksResult.rows[0].completed_count);
+        const totalSubTasks = subTasksResult.rows.length;
+        
+        isCompleted = completedCount >= totalSubTasks;
+        
+        console.log(`[Cron] Session ${session.id}: ${completedCount}/${totalSubTasks} sub-tasks completed`);
+      } else {
+        // No sub-tasks - check total duration
+        isCompleted = session.duration_completed_minutes >= session.target_minutes;
+        
+        console.log(`[Cron] Session ${session.id}: ${session.duration_completed_minutes}/${session.target_minutes} minutes completed`);
+      }
+      
       const newStatus = isCompleted ? 'DONE' : 'MISSED';
       
       await query(`

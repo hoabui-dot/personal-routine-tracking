@@ -222,6 +222,15 @@ export const gameApi = {
     return data.data;
   },
 
+  getCompletedSubTasks: async (sessionId: number): Promise<any[]> => {
+    const response = await fetch(`${API_URL}/game/daily-sessions/${sessionId}/completed-subtasks`, {
+      credentials: 'include',
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
   pauseSession: async (sessionId: number): Promise<DailySession> => {
     const response = await fetch(`${API_URL}/game/daily-sessions/pause`, {
       method: 'POST',

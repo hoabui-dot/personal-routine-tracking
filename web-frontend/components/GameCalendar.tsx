@@ -29,6 +29,7 @@ const GameCalendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [selectedSubTaskByUser, setSelectedSubTaskByUser] = useState<Record<number, number | null>>({});
+  const [completedSubTasksBySession, setCompletedSubTasksBySession] = useState<Record<number, number[]>>({});
   const [allSubTasks, setAllSubTasks] = useState<GoalSubTask[]>([]);
   const [timeElapsedByUser, setTimeElapsedByUser] = useState<Record<number, number>>({});
   const [sessionStatusByUser, setSessionStatusByUser] = useState<Record<string, 'IN_PROGRESS' | 'PAUSED' | 'DONE' | 'MISSED'>>({});
@@ -119,6 +120,23 @@ const GameCalendar: React.FC = () => {
         endDate: formatDateLocal(endDate),
       });
       setSessions(sessionsData);
+      
+      // Load completed sub-tasks for all sessions
+      const completedSubTasksMap: Record<number, number[]> = {};
+      await Promise.all(
+        sessionsData.map(async (session) => {
+          if (session.id) {
+            try {
+              const completed = await gameApi.getCompletedSubTasks(session.id);
+              completedSubTasksMap[session.id] = completed.map(c => c.sub_task_id);
+            } catch (error) {
+              console.error(`Failed to load completed sub-tasks for session ${session.id}:`, error);
+              completedSubTasksMap[session.id] = [];
+            }
+          }
+        })
+      );
+      setCompletedSubTasksBySession(completedSubTasksMap);
     } catch (error) {
       console.error('[GameCalendar Error] Failed to load data:', {
         year,
@@ -487,7 +505,15 @@ const GameCalendar: React.FC = () => {
   // Check if session should show timer (optimistic)
   const shouldShowTimer = (userId: number, date: string, session?: DailySession) => {
     const status = getCurrentSessionStatus(userId, date, session);
-    return status === 'IN_PROGRESS' || status === 'PAUSED';
+    // Only show timer if status is IN_PROGRESS or PAUSED AND there's an active sub-task or started_at
+    if (status === 'IN_PROGRESS' || status === 'PAUSED') {
+      // If session exists, check if there's an active sub-task or timer
+      if (session) {
+        return !!(session.sub_task_id || session.started_at);
+      }
+      return true;
+    }
+    return false;
   };
 
   const formatTime = (seconds: number) => {
@@ -941,6 +967,12 @@ const GameCalendar: React.FC = () => {
                 // Get sub-tasks for this user's goal
                 const userSubTasks = userGoal ? allSubTasks.filter(st => st.user_goal_id === userGoal.id) : [];
                 const currentSubTask = session?.sub_task_id ? allSubTasks.find(st => st.id === session.sub_task_id) : null;
+                
+                // Get completed sub-tasks for this session
+                const completedSubTaskIds = sessionId ? (completedSubTasksBySession[sessionId] || []) : [];
+                
+                // Filter available sub-tasks (not completed yet)
+                const availableSubTasks = userSubTasks.filter(st => !completedSubTaskIds.includes(st.id));
 
                 // Get user initials for avatar fallback
                 const getUserInitials = (name: string) => {
@@ -1257,8 +1289,11 @@ const GameCalendar: React.FC = () => {
                           {session.status === 'DONE' ? '✅ DONE' : '❌ MISSED'}
                         </div>
                       )}
-
-                      {!session && !showTimer && (
+                      {/* Show sub-task selector when:
+                          1. No session exists yet, OR
+                          2. Session exists but no active sub-task (completed previous sub-task)
+                      */}
+                      {(!session || (session && !session.sub_task_id && !session.started_at)) && !showTimer && (
                         <div>
                           {/* Sub-task selection - REQUIRED if sub-tasks exist */}
                           {userSubTasks.length > 0 ? (
@@ -1270,29 +1305,50 @@ const GameCalendar: React.FC = () => {
                                 color: theme.text,
                                 marginBottom: '0.5rem'
                               }}>
-                                Select Task to Start
+                                {session && session.duration_completed_minutes > 0 
+                                  ? `✅ Progress: ${session.duration_completed_minutes} min (${completedSubTaskIds.length}/${userSubTasks.length} tasks) - Select Next Task`
+                                  : 'Select Task to Start'}
                               </label>
-                              <CustomSelect
-                                options={userSubTasks.map(st => ({
-                                  id: st.id,
-                                  name: st.title,
-                                  description: `${st.duration_minutes} minutes`,
-                                  icon: '📝'
-                                }))}
-                                value={selectedSubTaskByUser[user.id] ? {
-                                  id: selectedSubTaskByUser[user.id]!,
-                                  name: userSubTasks.find(st => st.id === selectedSubTaskByUser[user.id])?.title || '',
-                                  description: `${userSubTasks.find(st => st.id === selectedSubTaskByUser[user.id])?.duration_minutes || 0} minutes`,
-                                  icon: '📝'
-                                } : null}
-                                onChange={(option) => {
-                                  setSelectedSubTaskByUser(prev => ({
-                                    ...prev,
-                                    [user.id]: Number(option.id)
-                                  }));
-                                }}
-                                placeholder="Choose a task to start"
-                              />
+                              {availableSubTasks.length > 0 ? (
+                                <CustomSelect
+                                  options={availableSubTasks.map(st => ({
+                                    id: st.id,
+                                    name: st.title,
+                                    description: `${st.duration_minutes} minutes`,
+                                    icon: '📝'
+                                  }))}
+                                  value={selectedSubTaskByUser[user.id] && availableSubTasks.find(st => st.id === selectedSubTaskByUser[user.id]) ? {
+                                    id: selectedSubTaskByUser[user.id]!,
+                                    name: availableSubTasks.find(st => st.id === selectedSubTaskByUser[user.id])?.title || '',
+                                    description: `${availableSubTasks.find(st => st.id === selectedSubTaskByUser[user.id])?.duration_minutes || 0} minutes`,
+                                    icon: '📝'
+                                  } : null}
+                                  onChange={(option) => {
+                                    setSelectedSubTaskByUser(prev => ({
+                                      ...prev,
+                                      [user.id]: Number(option.id)
+                                    }));
+                                  }}
+                                  placeholder="Choose a task to start"
+                                />
+                              ) : (
+                                <div style={{
+                                  padding: '1rem',
+                                  background: theme.success + '20',
+                                  borderRadius: '0.5rem',
+                                  border: `2px solid ${theme.success}`,
+                                  textAlign: 'center'
+                                }}>
+                                  <p style={{
+                                    fontSize: '0.875rem',
+                                    color: theme.success,
+                                    margin: 0,
+                                    fontWeight: '600'
+                                  }}>
+                                    🎉 All sub-tasks completed! Click Stop to finish.
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             // No sub-tasks available - show info message
@@ -1316,38 +1372,46 @@ const GameCalendar: React.FC = () => {
                           
                           <button
                             onClick={() => {
-                              const subTaskId = userSubTasks.length > 0 ? selectedSubTaskByUser[user.id] || undefined : undefined;
+                              const subTaskId = availableSubTasks.length > 0 ? selectedSubTaskByUser[user.id] || undefined : undefined;
                               
                               // If sub-tasks exist but none selected, show error
-                              if (userSubTasks.length > 0 && !subTaskId) {
+                              if (availableSubTasks.length > 0 && !subTaskId) {
                                 toast.error('Please select a task to start');
+                                return;
+                              }
+                              
+                              // If all sub-tasks completed, don't allow starting
+                              if (userSubTasks.length > 0 && availableSubTasks.length === 0) {
+                                toast.info('All sub-tasks completed! Click Stop to finish the session.');
                                 return;
                               }
                               
                               handleStartSession(user.id, subTaskId);
                             }}
-                            disabled={selectedDate !== today || !canUserAct(user.id)}
+                            disabled={selectedDate !== today || !canUserAct(user.id) || (userSubTasks.length > 0 && availableSubTasks.length === 0)}
                             className="start-button"
                             style={{
                               width: '100%',
                               padding: '0.75rem',
-                              background: selectedDate === today && canUserAct(user.id) ? theme.success : theme.border,
+                              background: selectedDate === today && canUserAct(user.id) && !(userSubTasks.length > 0 && availableSubTasks.length === 0) ? theme.success : theme.border,
                               color: 'white',
                               border: 'none',
                               borderRadius: '0.5rem',
-                              cursor: selectedDate === today && canUserAct(user.id) ? 'pointer' : 'not-allowed',
+                              cursor: selectedDate === today && canUserAct(user.id) && !(userSubTasks.length > 0 && availableSubTasks.length === 0) ? 'pointer' : 'not-allowed',
                               fontWeight: '600',
                               fontSize: '0.875rem',
-                              opacity: !canUserAct(user.id) ? 0.5 : 1
+                              opacity: !canUserAct(user.id) || (userSubTasks.length > 0 && availableSubTasks.length === 0) ? 0.5 : 1
                             }}
                           >
                             {!canUserAct(user.id) 
                               ? '🔒 Not your session' 
-                              : selectedDate === today 
-                                ? userSubTasks.length > 0 
-                                  ? '▶️ Start Selected Task'
-                                  : '▶️ Start Goal Session'
-                                : 'Can only start today'}
+                              : userSubTasks.length > 0 && availableSubTasks.length === 0
+                                ? '✅ All Tasks Done'
+                                : selectedDate === today 
+                                  ? availableSubTasks.length > 0 
+                                    ? '▶️ Start Selected Task'
+                                    : '▶️ Start Goal Session'
+                                  : 'Can only start today'}
                           </button>
                         </div>
                       )}

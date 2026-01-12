@@ -353,6 +353,13 @@ router.post('/complete-subtask', async (req: Request, res: Response) => {
     // Add completed minutes to the session's total
     const newTotalMinutes = (session.duration_completed_minutes || 0) + activeElapsedMinutes;
     
+    // Record the completed sub-task
+    await query(`
+      INSERT INTO completed_subtasks (session_id, sub_task_id, duration_minutes)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (session_id, sub_task_id) DO NOTHING
+    `, [session_id, session.sub_task_id, activeElapsedMinutes]);
+    
     // Reset the session to allow starting next sub-task
     // Keep the session IN_PROGRESS but clear sub_task_id and reset timers
     const result = await query(`
@@ -666,6 +673,32 @@ router.post('/check-and-cleanup', async (_, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to check sessions',
+    });
+  }
+});
+
+// GET /daily-sessions/:sessionId/completed-subtasks - Get completed sub-tasks for a session
+router.get('/:sessionId/completed-subtasks', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const result = await query(`
+      SELECT cs.*, gst.title, gst.duration_minutes as target_duration
+      FROM completed_subtasks cs
+      JOIN goal_sub_tasks gst ON cs.sub_task_id = gst.id
+      WHERE cs.session_id = $1
+      ORDER BY cs.completed_at
+    `, [sessionId]);
+    
+    res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching completed sub-tasks:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch completed sub-tasks',
     });
   }
 });
