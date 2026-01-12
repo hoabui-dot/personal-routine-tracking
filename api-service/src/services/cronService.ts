@@ -97,14 +97,16 @@ async function calculateDailyReports() {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
+    // Only get user goals that are NOT paused
     const userGoalsResult = await query(`
-      SELECT ug.user_id, ug.goal_id, u.name as user_name, u.email, g.title as goal_title
+      SELECT ug.user_id, ug.goal_id, ug.is_paused, u.name as user_name, u.email, g.title as goal_title
       FROM user_goals ug
       JOIN users u ON ug.user_id = u.id
       JOIN goals g ON ug.goal_id = g.id
+      WHERE ug.is_paused = FALSE OR ug.is_paused IS NULL
     `);
     
-    console.log(`[Cron] Checking ${userGoalsResult.rows.length} user-goal combinations for ${yesterdayStr}`);
+    console.log(`[Cron] Checking ${userGoalsResult.rows.length} active (non-paused) user-goal combinations for ${yesterdayStr}`);
     
     for (const userGoal of userGoalsResult.rows) {
       const sessionResult = await query(`
@@ -147,19 +149,27 @@ async function sendDailyReminders() {
     console.log(`[Cron] Sending reminders to ${usersResult.rows.length} users`);
     
     for (const user of usersResult.rows) {
+      // Only include active (non-paused) goals in reminders
       const goalsResult = await query(`
         SELECT 
-          g.title, ug.daily_duration_minutes,
+          g.title, ug.daily_duration_minutes, ug.is_paused,
           COALESCE(ds.status, 'NOT_STARTED') as status,
           COALESCE(ds.duration_completed_minutes, 0) as completed_minutes
         FROM user_goals ug
         JOIN goals g ON ug.goal_id = g.id
         LEFT JOIN daily_sessions ds ON ds.user_id = ug.user_id AND ds.goal_id = ug.goal_id AND ds.date = $1
-        WHERE ug.user_id = $2
+        WHERE ug.user_id = $2 AND (ug.is_paused = FALSE OR ug.is_paused IS NULL)
         ORDER BY g.title
       `, [today, user.id]);
       
       const goals = goalsResult.rows;
+      
+      // Skip sending email if user has no active goals
+      if (goals.length === 0) {
+        console.log(`[Cron] Skipping ${user.name} - all goals are paused`);
+        continue;
+      }
+      
       const totalGoals = goals.length;
       const completedGoals = goals.filter(g => g.status === 'DONE').length;
       const inProgressGoals = goals.filter(g => g.status === 'IN_PROGRESS' || g.status === 'PAUSED').length;

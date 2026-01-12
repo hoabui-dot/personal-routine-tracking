@@ -427,6 +427,36 @@ const GameCalendar: React.FC = () => {
     );
   };
 
+  const handleCompleteSubTask = (sessionId: number, userId: number) => {
+    // Check permission
+    if (!canUserAct(userId)) {
+      toast.error('You can only manage your own sessions');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      '✅ Complete this sub-task?\n\n' +
+      'This will mark the current sub-task as done and allow you to start the next one.\n' +
+      'Your progress will be saved.'
+    );
+    
+    if (!confirmed) return;
+    
+    // Immediate UI update (optimistic) - reset timer
+    setTimeElapsedByUser(prev => {
+      const updated = { ...prev };
+      delete updated[userId];
+      return updated;
+    });
+
+    // Background API call
+    callApiInBackground(
+      () => gameApi.completeSubTask(sessionId),
+      'Sub-task completed! ✅'
+    );
+  };
+
   const getDaysInMonth = () => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
@@ -532,7 +562,14 @@ const GameCalendar: React.FC = () => {
             gap: 'clamp(0.75rem, 2vw, 1rem)', 
             marginBottom: 'clamp(1rem, 3vw, 2rem)' 
           }}>
-            {summary.map(s => {
+            {summary
+              .filter(s => {
+                // Hide paused users from summary
+                if (!selectedGoalId) return true;
+                const userGoal = userGoals.find(ug => ug.user_id === s.user_id && ug.goal_id === selectedGoalId);
+                return !userGoal?.is_paused;
+              })
+              .map(s => {
               const user = users.find(u => u.id === s.user_id);
               
               // Get user initials for avatar fallback
@@ -837,7 +874,14 @@ const GameCalendar: React.FC = () => {
                   }}
                 >
                   <div style={{ fontSize: '0.875rem', fontWeight: '600', color: isSelected ? theme.success : theme.text }}>{day}</div>
-                  {users.map(user => {
+                  {users
+                    .filter(user => {
+                      // Hide paused users from calendar grid
+                      if (!selectedGoalId) return true;
+                      const userGoal = userGoals.find(ug => ug.user_id === user.id && ug.goal_id === selectedGoalId);
+                      return !userGoal?.is_paused;
+                    })
+                    .map(user => {
                     const session = getSessionForDate(user.id, dateStr);
                     const optimisticKey = `${user.id}-${dateStr}`;
                     
@@ -879,6 +923,9 @@ const GameCalendar: React.FC = () => {
                 .filter(user => {
                   // Only show users who have the selected goal
                   if (!selectedGoalId) return true;
+                  const userGoal = userGoals.find(ug => ug.user_id === user.id && ug.goal_id === selectedGoalId);
+                  // Hide users who have paused this goal
+                  if (userGoal?.is_paused) return false;
                   return userGoals.some(ug => ug.user_id === user.id && ug.goal_id === selectedGoalId);
                 })
                 .map(user => {
@@ -1079,9 +1126,33 @@ const GameCalendar: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="timer-buttons" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <div className="timer-buttons" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                             {currentStatus === 'IN_PROGRESS' && (
                               <>
+                                {/* Show Complete Sub-Task button if tracking a sub-task */}
+                                {currentSubTask && (
+                                  <button
+                                    onClick={() => sessionId && handleCompleteSubTask(sessionId, user.id)}
+                                    disabled={!sessionId || !canUserAct(user.id)}
+                                    className="timer-button"
+                                    style={{
+                                      flex: '1 1 100%',
+                                      padding: '0.75rem',
+                                      background: canUserAct(user.id) ? `linear-gradient(135deg, ${theme.success}, ${theme.primary})` : theme.border,
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '0.5rem',
+                                      cursor: canUserAct(user.id) ? 'pointer' : 'not-allowed',
+                                      fontWeight: '700',
+                                      fontSize: '0.875rem',
+                                      opacity: !canUserAct(user.id) ? 0.5 : 1,
+                                      transition: 'all 0.2s ease',
+                                      boxShadow: canUserAct(user.id) ? `0 4px 8px ${theme.shadow}` : 'none'
+                                    }}
+                                  >
+                                    {canUserAct(user.id) ? `✅ Complete "${currentSubTask.title}"` : '🔒'}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => sessionId && handlePauseSession(sessionId, user.id)}
                                   disabled={!sessionId || !canUserAct(user.id)}

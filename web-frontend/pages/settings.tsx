@@ -152,6 +152,26 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handlePauseGoal = async (userId: number, goalId: number) => {
+    try {
+      await gameApi.pauseUserGoal(userId, goalId);
+      await loadData(true);
+      toast.success('Goal paused. You will not receive missed day marks while paused.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to pause goal');
+    }
+  };
+
+  const handleUnpauseGoal = async (userId: number, goalId: number) => {
+    try {
+      await gameApi.unpauseUserGoal(userId, goalId);
+      await loadData(true);
+      toast.success('Goal resumed. Tracking will continue from today.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resume goal');
+    }
+  };
+
   const handleAddSubTask = async (userGoalId: number) => {
     if (!newSubTask || newSubTask.userGoalId !== userGoalId) {
       setNewSubTask({ userGoalId, title: '', minutes: 30 });
@@ -724,13 +744,31 @@ const Settings: React.FC = () => {
                                   justifyContent: 'space-between',
                                   marginBottom: '1rem'
                                 }}>
-                                  <h3 style={{
-                                    fontSize: '1.125rem',
-                                    fontWeight: '600',
-                                    color: theme.text
-                                  }}>
-                                    {userGoal.user_name}
-                                  </h3>
+                                  <div style={{ flex: 1 }}>
+                                    <h3 style={{
+                                      fontSize: '1.125rem',
+                                      fontWeight: '600',
+                                      color: theme.text
+                                    }}>
+                                      {userGoal.user_name}
+                                    </h3>
+                                    {userGoal.is_paused && (
+                                      <div style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        marginTop: '0.25rem',
+                                        padding: '0.25rem 0.5rem',
+                                        background: `${theme.warning}20`,
+                                        color: theme.warning,
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600'
+                                      }}>
+                                        ⏸️ Paused
+                                      </div>
+                                    )}
+                                  </div>
                                   <div style={{
                                     fontSize: '0.875rem',
                                     color: theme.textSecondary
@@ -802,6 +840,63 @@ const Settings: React.FC = () => {
                                       {saving === userGoal.user_id ? 'Saving...' : 'Save'}
                                     </button>
                                   </div>
+                                </div>
+
+                                {/* Pause/Resume Control */}
+                                <div style={{ marginBottom: '1rem' }}>
+                                  <button
+                                    onClick={() => {
+                                      if (userGoal.is_paused) {
+                                        handleUnpauseGoal(userGoal.user_id, userGoal.goal_id);
+                                      } else {
+                                        if (confirm('Are you sure you want to pause this goal? You will not receive missed day marks while paused.')) {
+                                          handlePauseGoal(userGoal.user_id, userGoal.goal_id);
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '0.75rem',
+                                      background: userGoal.is_paused 
+                                        ? `linear-gradient(135deg, ${theme.success}, ${theme.success}dd)` 
+                                        : `linear-gradient(135deg, ${theme.warning}, ${theme.warning}dd)`,
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '0.5rem',
+                                      cursor: 'pointer',
+                                      fontWeight: '600',
+                                      fontSize: '0.875rem',
+                                      boxShadow: `0 4px 8px ${theme.shadow}`,
+                                      transition: 'all 0.2s ease',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.5rem'
+                                    }}
+                                  >
+                                    {userGoal.is_paused ? (
+                                      <>
+                                        <span>▶️</span>
+                                        <span>Resume Goal</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span>⏸️</span>
+                                        <span>Pause Goal (Take a Break)</span>
+                                      </>
+                                    )}
+                                  </button>
+                                  {userGoal.is_paused && userGoal.paused_at && (
+                                    <p style={{
+                                      fontSize: '0.75rem',
+                                      color: theme.textSecondary,
+                                      marginTop: '0.5rem',
+                                      textAlign: 'center',
+                                      fontStyle: 'italic'
+                                    }}>
+                                      Paused since {new Date(userGoal.paused_at).toLocaleDateString()}
+                                    </p>
+                                  )}
                                 </div>
 
                                 {/* Sub-Tasks */}

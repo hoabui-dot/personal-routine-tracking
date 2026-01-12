@@ -15,7 +15,9 @@ router.get('/', async (_req: Request, res: Response) => {
         ug.goal_id,
         g.title as goal_title,
         ug.daily_duration_minutes,
-        ROUND(ug.daily_duration_minutes / 60.0, 2) as daily_duration_hours
+        ROUND(ug.daily_duration_minutes / 60.0, 2) as daily_duration_hours,
+        ug.is_paused,
+        ug.paused_at
       FROM user_goals ug
       JOIN users u ON ug.user_id = u.id
       JOIN goals g ON ug.goal_id = g.id
@@ -48,7 +50,9 @@ router.get('/:userId/:goalId', async (req: Request, res: Response) => {
         ug.goal_id,
         g.title as goal_title,
         ug.daily_duration_minutes,
-        ROUND(ug.daily_duration_minutes / 60.0, 2) as daily_duration_hours
+        ROUND(ug.daily_duration_minutes / 60.0, 2) as daily_duration_hours,
+        ug.is_paused,
+        ug.paused_at
       FROM user_goals ug
       JOIN users u ON ug.user_id = u.id
       JOIN goals g ON ug.goal_id = g.id
@@ -120,3 +124,71 @@ router.put('/:userId/:goalId', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// POST /user-goals/:userId/:goalId/pause - Pause a user goal
+router.post('/:userId/:goalId/pause', async (req: Request, res: Response) => {
+  try {
+    const { userId, goalId } = req.params;
+    
+    const result = await query(`
+      UPDATE user_goals 
+      SET is_paused = TRUE, paused_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1 AND goal_id = $2
+      RETURNING *
+    `, [userId, goalId]);
+    
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'User goal not found',
+      });
+      return;
+    }
+    
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Goal paused successfully. You will not receive missed day marks while paused.',
+    });
+  } catch (error) {
+    console.error('Error pausing user goal:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to pause user goal',
+    });
+  }
+});
+
+// POST /user-goals/:userId/:goalId/unpause - Unpause a user goal
+router.post('/:userId/:goalId/unpause', async (req: Request, res: Response) => {
+  try {
+    const { userId, goalId } = req.params;
+    
+    const result = await query(`
+      UPDATE user_goals 
+      SET is_paused = FALSE, paused_at = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1 AND goal_id = $2
+      RETURNING *
+    `, [userId, goalId]);
+    
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'User goal not found',
+      });
+      return;
+    }
+    
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Goal resumed successfully. Tracking will continue from today.',
+    });
+  } catch (error) {
+    console.error('Error unpausing user goal:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unpause user goal',
+    });
+  }
+});

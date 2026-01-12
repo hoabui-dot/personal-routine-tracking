@@ -74,6 +74,28 @@ export const gameApi = {
     return data.data;
   },
 
+  pauseUserGoal: async (userId: number, goalId: number): Promise<UserGoal> => {
+    const response = await fetch(`${API_URL}/game/user-goals/${userId}/${goalId}/pause`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  unpauseUserGoal: async (userId: number, goalId: number): Promise<UserGoal> => {
+    const response = await fetch(`${API_URL}/game/user-goals/${userId}/${goalId}/unpause`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
   // Goal Sub-Tasks
   getGoalSubTasks: async (userGoalId?: number): Promise<GoalSubTask[]> => {
     const url = userGoalId 
@@ -178,6 +200,18 @@ export const gameApi = {
 
   completeSession: async (sessionId: number): Promise<DailySession> => {
     const response = await fetch(`${API_URL}/game/daily-sessions/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  },
+
+  completeSubTask: async (sessionId: number): Promise<DailySession> => {
+    const response = await fetch(`${API_URL}/game/daily-sessions/complete-subtask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

@@ -14,6 +14,8 @@ export interface UserGoal {
   goal_title: string;
   daily_duration_minutes: number;
   daily_duration_hours: number;
+  is_paused?: boolean;
+  paused_at?: string | null;
 }
 
 export interface GoalSubTask {

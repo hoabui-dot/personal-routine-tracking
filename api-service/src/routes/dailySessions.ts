@@ -192,21 +192,41 @@ router.post('/stop', async (req: Request, res: Response) => {
     
     const session = sessionResult.rows[0];
     
-    // Get required duration
-    const goalResult = await query(
-      'SELECT daily_duration_minutes FROM user_goals WHERE user_id = $1 AND goal_id = $2',
-      [session.user_id, session.goal_id]
-    );
-    
-    if (goalResult.rows.length === 0) {
-      res.status(404).json({
-        success: false,
-        error: 'User goal not found',
-      });
-      return;
+    // Get required duration - check if this is a sub-task session
+    let requiredMinutes;
+    if (session.sub_task_id) {
+      // Get sub-task duration
+      const subTaskResult = await query(
+        'SELECT duration_minutes FROM goal_sub_tasks WHERE id = $1',
+        [session.sub_task_id]
+      );
+      
+      if (subTaskResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Sub-task not found',
+        });
+        return;
+      }
+      
+      requiredMinutes = subTaskResult.rows[0].duration_minutes;
+    } else {
+      // Get goal duration
+      const goalResult = await query(
+        'SELECT daily_duration_minutes FROM user_goals WHERE user_id = $1 AND goal_id = $2',
+        [session.user_id, session.goal_id]
+      );
+      
+      if (goalResult.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'User goal not found',
+        });
+        return;
+      }
+      
+      requiredMinutes = goalResult.rows[0].daily_duration_minutes;
     }
-    
-    const requiredMinutes = goalResult.rows[0].daily_duration_minutes;
     
     // Calculate actual active duration (excluding paused time)
     const startedAt = new Date(session.started_at);
@@ -254,6 +274,111 @@ router.post('/stop', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to stop session',
+    });
+  }
+});
+
+// POST /daily-sessions/complete-subtask - Complete current sub-task and allow continuing
+router.post('/complete-subtask', async (req: Request, res: Response) => {
+  try {
+    const { session_id } = req.body;
+    
+    if (!session_id) {
+      res.status(400).json({
+        success: false,
+        error: 'session_id is required',
+      });
+      return;
+    }
+    
+    // Get session
+    const sessionResult = await query(
+      'SELECT * FROM daily_sessions WHERE id = $1',
+      [session_id]
+    );
+    
+    if (sessionResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Session not found',
+      });
+      return;
+    }
+    
+    const session = sessionResult.rows[0];
+    
+    if (!session.sub_task_id) {
+      res.status(400).json({
+        success: false,
+        error: 'This session is not tracking a sub-task',
+      });
+      return;
+    }
+    
+    // Get sub-task duration
+    const subTaskResult = await query(
+      'SELECT duration_minutes, title FROM goal_sub_tasks WHERE id = $1',
+      [session.sub_task_id]
+    );
+    
+    if (subTaskResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Sub-task not found',
+      });
+      return;
+    }
+    
+    const subTask = subTaskResult.rows[0];
+    const requiredMinutes = subTask.duration_minutes;
+    
+    // Calculate actual active duration (excluding paused time)
+    const startedAt = new Date(session.started_at);
+    const now = new Date();
+    const totalElapsedMs = now.getTime() - startedAt.getTime();
+    const totalElapsedSeconds = Math.floor(totalElapsedMs / 1000);
+    const pausedSeconds = session.total_paused_seconds || 0;
+    const activeElapsedSeconds = totalElapsedSeconds - pausedSeconds;
+    const activeElapsedMinutes = Math.floor(activeElapsedSeconds / 60);
+    
+    // Check if sub-task is completed
+    if (activeElapsedMinutes < requiredMinutes) {
+      res.status(400).json({
+        success: false,
+        error: `Sub-task not completed yet. Need ${requiredMinutes - activeElapsedMinutes} more minutes.`,
+      });
+      return;
+    }
+    
+    // Add completed minutes to the session's total
+    const newTotalMinutes = (session.duration_completed_minutes || 0) + activeElapsedMinutes;
+    
+    // Reset the session to allow starting next sub-task
+    // Keep the session IN_PROGRESS but clear sub_task_id and reset timers
+    const result = await query(`
+      UPDATE daily_sessions 
+      SET 
+        duration_completed_minutes = $1,
+        sub_task_id = NULL,
+        started_at = NULL,
+        paused_at = NULL,
+        total_paused_seconds = 0,
+        status = 'IN_PROGRESS',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [newTotalMinutes, session_id]);
+    
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: `✅ Sub-task "${subTask.title}" completed! You can now start the next sub-task.`,
+    });
+  } catch (error) {
+    console.error('Error completing sub-task:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete sub-task',
     });
   }
 });
