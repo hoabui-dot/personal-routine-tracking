@@ -139,19 +139,21 @@ router.post('/login', async (req: Request, res: Response) => {
     // Set HTTP-Only cookie
     res.cookie('auth_token', token, {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production', // HTTPS only in production
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+      secure: false, // Allow HTTP for development/local testing
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/', // Ensure cookie is available for all paths
+      path: '/',
+      domain: undefined, // Don't set domain to allow localhost
     });
 
     console.log('[Auth /login] Cookie set successfully for user:', user.email);
     console.log('[Auth /login] Cookie options:', {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
+      domain: undefined,
     });
 
     res.json({
@@ -554,9 +556,10 @@ router.post('/logout', async (_: Request, res: Response) => {
   // Clear the HTTP-Only cookie
   res.clearCookie('auth_token', {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
     path: '/',
+    domain: undefined,
   });
   
   res.json({
