@@ -5,6 +5,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimerProvider } from '@/contexts/TimerContext';
+import { FloatingTimerPopup } from '@/components/FloatingTimerPopup';
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
@@ -13,6 +14,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <AuthProvider>
           <TimerProvider>
             <Component {...pageProps} />
+            <FloatingTimerPopup />
           </TimerProvider>
         </AuthProvider>
       </ToastProvider>

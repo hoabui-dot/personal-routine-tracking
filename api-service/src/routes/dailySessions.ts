@@ -574,7 +574,7 @@ router.post('/resume', async (req: Request, res: Response) => {
   }
 });
 
-// POST /daily-sessions/check-and-cleanup - Check for stale sessions and auto-pause today's sessions
+// POST /daily-sessions/check-and-cleanup - Check for stale sessions (NO AUTO-PAUSE)
 router.post('/check-and-cleanup', async (_, res: Response) => {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -601,28 +601,7 @@ router.post('/check-and-cleanup', async (_, res: Response) => {
       `, [today]);
     }
     
-    // Auto-pause all IN_PROGRESS sessions for today (on page refresh)
-    const todayInProgressResult = await query(`
-      SELECT * FROM daily_sessions 
-      WHERE date = $1 
-      AND status = 'IN_PROGRESS'
-    `, [today]);
-    
-    const todayInProgress = todayInProgressResult.rows;
-    
-    if (todayInProgress.length > 0) {
-      await query(`
-        UPDATE daily_sessions 
-        SET 
-          status = 'PAUSED',
-          paused_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE date = $1 
-        AND status = 'IN_PROGRESS'
-      `, [today]);
-    }
-    
-    // Get today's sessions (now all should be PAUSED or DONE)
+    // Get today's sessions (return ALL statuses, not just PAUSED/DONE)
     const todayResult = await query(`
       SELECT 
         ds.id,
@@ -641,22 +620,19 @@ router.post('/check-and-cleanup', async (_, res: Response) => {
         u.name as user_name
       FROM daily_sessions ds
       JOIN users u ON ds.user_id = u.id
-      WHERE ds.date = $1 
-      AND ds.status IN ('PAUSED', 'DONE')
+      WHERE ds.date = $1
     `, [today]);
     
     res.json({
       success: true,
       data: {
         cleanedUp: staleSessions.length,
-        autoPaused: todayInProgress.length,
+        autoPaused: 0, // No longer auto-pausing
         sessions: todayResult.rows,
       },
       message: staleSessions.length > 0 
-        ? `Marked ${staleSessions.length} old session(s) as MISSED${todayInProgress.length > 0 ? ` and auto-paused ${todayInProgress.length} session(s)` : ''}` 
-        : todayInProgress.length > 0 
-          ? `Auto-paused ${todayInProgress.length} session(s)`
-          : 'No stale sessions found',
+        ? `Marked ${staleSessions.length} old session(s) as MISSED` 
+        : 'No stale sessions found',
     });
   } catch (error) {
     console.error('Error checking sessions:', error);

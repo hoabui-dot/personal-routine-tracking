@@ -17,7 +17,7 @@ const GameCalendar: React.FC = () => {
     stopTimer, 
     pauseTimer, 
     resumeTimer, 
-    resetTimer 
+    resetTimer
   } = useTimer();
   
   // Get today's date in local timezone (YYYY-MM-DD format)
@@ -137,27 +137,8 @@ const GameCalendar: React.FC = () => {
       const subTasksData = await gameApi.getGoalSubTasks();
       setAllSubTasks(subTasksData);
       
-      const result = await gameApi.checkAndCleanup();
-      
-      if (result.cleanedUp > 0) {
-        toast.info(`${result.cleanedUp} session(s) from previous days marked as MISSED`);
-      }
-      
-      // Initialize timers for active sessions
-      if (result.sessions && result.sessions.length > 0) {
-        result.sessions.forEach((session: DailySession) => {
-          if ((session.status === 'IN_PROGRESS' || session.status === 'PAUSED') && session.started_at && session.id) {
-            startTimer(
-              session.user_id,
-              session.id,
-              session.started_at,
-              session.total_paused_seconds || 0,
-              session.date
-            );
-            console.log(`[Init] Started timer for user ${session.user_id}, session ${session.id}`);
-          }
-        });
-      }
+      // Note: Timer initialization is now handled by TimerContext
+      // No need to call checkAndCleanup here to avoid auto-pausing timers
       
       setInitialized(true);
     } catch (error) {
@@ -169,7 +150,7 @@ const GameCalendar: React.FC = () => {
       });
       setInitialized(true);
     }
-  }, [initialized, toast, startTimer]);
+  }, [initialized]);
 
   useEffect(() => {
     initializeApp();
