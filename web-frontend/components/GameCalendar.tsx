@@ -1,14 +1,24 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { gameApi } from '../lib/api/game';
 import { User, UserGoal, DailySession, GameSummary, GoalSubTask } from '../types/game';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTimer } from '../contexts/TimerContext';
 import { CustomSelect } from './ui/CustomSelect';
 
 const GameCalendar: React.FC = () => {
   const { user: authUser } = useAuth();
   const { theme } = useTheme();
+  const { 
+    timeElapsedByUser, 
+    sessionStatusByUser, 
+    startTimer, 
+    stopTimer, 
+    pauseTimer, 
+    resumeTimer, 
+    resetTimer 
+  } = useTimer();
   
   // Get today's date in local timezone (YYYY-MM-DD format)
   const getTodayLocal = (): string => {
@@ -31,12 +41,8 @@ const GameCalendar: React.FC = () => {
   const [selectedSubTaskByUser, setSelectedSubTaskByUser] = useState<Record<number, number | null>>({});
   const [completedSubTasksBySession, setCompletedSubTasksBySession] = useState<Record<number, number[]>>({});
   const [allSubTasks, setAllSubTasks] = useState<GoalSubTask[]>([]);
-  const [timeElapsedByUser, setTimeElapsedByUser] = useState<Record<number, number>>({});
-  const [sessionStatusByUser, setSessionStatusByUser] = useState<Record<string, 'IN_PROGRESS' | 'PAUSED' | 'DONE' | 'MISSED'>>({});
   const [initialized, setInitialized] = useState(false);
   const toast = useToast();
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -48,33 +54,6 @@ const GameCalendar: React.FC = () => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-
-  // Sync with server every 30 seconds for active sessions
-  const syncWithServer = useCallback(async () => {
-    try {
-      const activeSessions = sessions.filter(s => 
-        (s.status === 'IN_PROGRESS' || s.status === 'PAUSED') && 
-        s.date === today
-      );
-      
-      if (activeSessions.length === 0) return;
-      
-      // Fetch latest session data from server
-      const startDate = new Date(year, month, 1);
-      const endDate = new Date(year, month + 1, 0);
-      const latestSessions = await gameApi.getSessions({
-        startDate: formatDateLocal(startDate),
-        endDate: formatDateLocal(endDate),
-      });
-      
-      // Update sessions state with latest data
-      setSessions(latestSessions);
-      
-      console.log('🔄 Synced with server - updated session data');
-    } catch (error) {
-      console.error('Failed to sync with server:', error);
-    }
-  }, [sessions, today, year, month]);
 
   // Background API call helper (fire and forget)
   const callApiInBackground = (apiCall: () => Promise<any>, successMessage?: string) => {
@@ -164,56 +143,22 @@ const GameCalendar: React.FC = () => {
         toast.info(`${result.cleanedUp} session(s) from previous days marked as MISSED`);
       }
       
-      const goals = await gameApi.getUserGoals();
-      const newTimeElapsed: Record<number, number> = {};
-      const newSessionStatus: Record<string, 'IN_PROGRESS' | 'PAUSED' | 'DONE' | 'MISSED'> = {};
-      
+      // Initialize timers for active sessions
       if (result.sessions && result.sessions.length > 0) {
         result.sessions.forEach((session: DailySession) => {
-          if (session.status === 'IN_PROGRESS' || session.status === 'PAUSED') {
-            const userGoal = goals.find(g => g.user_id === session.user_id);
-            
-            if (userGoal && session.started_at) {
-              const startTime = new Date(session.started_at).getTime();
-              const now = Date.now();
-              const totalElapsed = Math.floor((now - startTime) / 1000);
-              const pausedSeconds = session.total_paused_seconds || 0;
-              
-              // For PAUSED sessions, calculate time at pause point
-              let activeElapsed = totalElapsed - pausedSeconds;
-              if (session.status === 'PAUSED' && session.paused_at) {
-                const pauseTime = new Date(session.paused_at).getTime();
-                const elapsedBeforePause = Math.floor((pauseTime - startTime) / 1000);
-                activeElapsed = elapsedBeforePause - pausedSeconds;
-              }
-              
-              // Store elapsed time (count up)
-              newTimeElapsed[session.user_id] = activeElapsed;
-              
-              // Determine target duration for logging
-              let required = userGoal.daily_duration_minutes * 60;
-              if (session.sub_task_id) {
-                const subTask = subTasksData.find(st => st.id === session.sub_task_id);
-                if (subTask) {
-                  required = subTask.duration_minutes * 60;
-                  console.log(`[Init] Using sub-task duration for user ${session.user_id}: ${subTask.duration_minutes}min (${subTask.title})`);
-                } else {
-                  console.warn(`[Init] Sub-task ${session.sub_task_id} not found, using goal duration`);
-                }
-              }
-              
-              console.log(`[Init] User ${session.user_id}: target=${required}s, elapsed=${activeElapsed}s`);
-              
-              // Use date-aware key for session status
-              const statusKey = `${session.user_id}-${session.date}`;
-              newSessionStatus[statusKey] = session.status;
-            }
+          if ((session.status === 'IN_PROGRESS' || session.status === 'PAUSED') && session.started_at && session.id) {
+            startTimer(
+              session.user_id,
+              session.id,
+              session.started_at,
+              session.total_paused_seconds || 0,
+              session.date
+            );
+            console.log(`[Init] Started timer for user ${session.user_id}, session ${session.id}`);
           }
         });
       }
       
-      setTimeElapsedByUser(newTimeElapsed);
-      setSessionStatusByUser(newSessionStatus);
       setInitialized(true);
     } catch (error) {
       console.error('[GameCalendar Error] Failed to initialize:', {
@@ -224,7 +169,7 @@ const GameCalendar: React.FC = () => {
       });
       setInitialized(true);
     }
-  }, [initialized, toast]);
+  }, [initialized, toast, startTimer]);
 
   useEffect(() => {
     initializeApp();
@@ -233,78 +178,6 @@ const GameCalendar: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  useEffect(() => {
-    const activeSessions = sessions.filter(s => 
-      (s.status === 'IN_PROGRESS' || s.status === 'PAUSED') && 
-      s.date === today
-    );
-    
-    // Clear existing intervals
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    if (syncIntervalRef.current) {
-      clearInterval(syncIntervalRef.current);
-      syncIntervalRef.current = null;
-    }
-    
-    if (activeSessions.length === 0) {
-      return;
-    }
-
-    const updateTimers = () => {
-      const newTimeElapsed: Record<number, number> = {};
-      
-      activeSessions.forEach(session => {
-        const userGoal = userGoals.find(ug => ug.user_id === session.user_id);
-        if (!userGoal || !session.started_at) return;
-
-        const startTime = new Date(session.started_at).getTime();
-        const now = Date.now();
-        const totalElapsed = Math.floor((now - startTime) / 1000);
-        const pausedSeconds = session.total_paused_seconds || 0;
-        
-        // For PAUSED sessions, don't count time after pause
-        let activeElapsed = totalElapsed - pausedSeconds;
-        
-        // If session is paused, freeze the elapsed time
-        if (session.status === 'PAUSED' && session.paused_at) {
-          const pauseTime = new Date(session.paused_at).getTime();
-          const elapsedBeforePause = Math.floor((pauseTime - startTime) / 1000);
-          activeElapsed = elapsedBeforePause - pausedSeconds;
-        }
-        
-        // Store elapsed time (count up)
-        newTimeElapsed[session.user_id] = activeElapsed;
-      });
-      
-      setTimeElapsedByUser(newTimeElapsed);
-    };
-
-    updateTimers();
-
-    const inProgressSessions = activeSessions.filter(s => s.status === 'IN_PROGRESS');
-    if (inProgressSessions.length > 0) {
-      // Update timers every second for IN_PROGRESS sessions
-      timerIntervalRef.current = setInterval(updateTimers, 1000);
-    }
-
-    // Sync with server every 30 seconds for all active sessions
-    syncIntervalRef.current = setInterval(syncWithServer, 30000);
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-        syncIntervalRef.current = null;
-      }
-    };
-  }, [sessions, today, userGoals, loadData, toast, syncWithServer]);
 
   // Check if the logged-in user can perform actions for a specific user
   const canUserAct = (targetUserId: number): boolean => {
@@ -341,23 +214,25 @@ const GameCalendar: React.FC = () => {
       return;
     }
 
-    // Immediate UI update (optimistic)
-    if (userGoal) {
-      // Start with 0 elapsed time
-      setTimeElapsedByUser(prev => ({
-        ...prev,
-        [userId]: 0
-      }));
-      const statusKey = `${userId}-${selectedDate}`;
-      setSessionStatusByUser(prev => ({
-        ...prev,
-        [statusKey]: 'IN_PROGRESS'
-      }));
-    }
-
     // Background API call
     callApiInBackground(
-      () => gameApi.startSession(userId, goalId, selectedDate, subTaskId),
+      async () => {
+        const session = await gameApi.startSession(userId, goalId, selectedDate, subTaskId);
+        
+        // Start the global timer after successful API call
+        if (session.started_at && session.id) {
+          startTimer(
+            userId,
+            session.id,
+            session.started_at,
+            session.total_paused_seconds || 0,
+            selectedDate
+          );
+          console.log(`⏱️ Started global timer for user ${userId}, session ${session.id}`);
+        }
+        
+        return session;
+      },
       'Session started! ⏱️'
     );
   };
@@ -379,22 +254,9 @@ const GameCalendar: React.FC = () => {
     
     if (!confirmed) return;
     
-    // Immediate UI update (optimistic)
-    setTimeElapsedByUser(prev => {
-      const updated = { ...prev };
-      delete updated[userId];
-      return updated;
-    });
-    setSessionStatusByUser(prev => {
-      const updated = { ...prev };
-      // Remove all entries for this user (across all dates)
-      Object.keys(updated).forEach(key => {
-        if (key.startsWith(`${userId}-`)) {
-          delete updated[key];
-        }
-      });
-      return updated;
-    });
+    // Stop the global timer
+    stopTimer(userId);
+    console.log(`⏹️ Stopped global timer for user ${userId}`);
 
     // Background API call
     callApiInBackground(
@@ -410,12 +272,9 @@ const GameCalendar: React.FC = () => {
       return;
     }
     
-    // Immediate UI update (optimistic)
-    const statusKey = `${userId}-${selectedDate}`;
-    setSessionStatusByUser(prev => ({
-      ...prev,
-      [statusKey]: 'PAUSED'
-    }));
+    // Pause the global timer
+    pauseTimer(userId, selectedDate);
+    console.log(`⏸️ Paused global timer for user ${userId}`);
 
     // Background API call
     callApiInBackground(
@@ -425,18 +284,9 @@ const GameCalendar: React.FC = () => {
   };
 
   const handleResumeSession = (sessionId: number, userId: number) => {
-    // Check permission
-    if (!canUserAct(userId)) {
-      toast.error('You can only manage your own sessions');
-      return;
-    }
-    
-    // Immediate UI update (optimistic)
-    const statusKey = `${userId}-${selectedDate}`;
-    setSessionStatusByUser(prev => ({
-      ...prev,
-      [statusKey]: 'IN_PROGRESS'
-    }));
+    // Resume the global timer
+    resumeTimer(userId, selectedDate);
+    console.log(`▶️ Resumed global timer for user ${userId}`);
 
     // Background API call
     callApiInBackground(
@@ -461,12 +311,9 @@ const GameCalendar: React.FC = () => {
     
     if (!confirmed) return;
     
-    // Immediate UI update (optimistic) - reset timer
-    setTimeElapsedByUser(prev => {
-      const updated = { ...prev };
-      delete updated[userId];
-      return updated;
-    });
+    // Reset the global timer
+    resetTimer(userId);
+    console.log(`🔄 Reset global timer for user ${userId}`);
 
     // Background API call
     callApiInBackground(

@@ -480,16 +480,6 @@ router.post('/pause', async (req: Request, res: Response) => {
       return;
     }
     
-    const session = sessionResult.rows[0];
-    
-    if (session.status !== 'IN_PROGRESS') {
-      res.status(400).json({
-        success: false,
-        error: 'Can only pause sessions that are in progress',
-      });
-      return;
-    }
-    
     // Pause the session
     const result = await query(`
       UPDATE daily_sessions 
